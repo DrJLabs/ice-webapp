@@ -1,0 +1,5 @@
+engines:
+  eslint:  { enabled: true }
+  ruff:    { enabled: true }
+  bandit:  { enabled: true }
+  duplication: { enabled: true }
