@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  codex-mirror:
+    image: ghcr.io/openai/codex-universal:latest
+    container_name: ice-webapp-codex-test
+    environment:
+      # Configure runtime versions to match Codex environment
+      - CODEX_ENV_PYTHON_VERSION=3.12
+      - CODEX_ENV_NODE_VERSION=22
+      - CODEX_ENV_RUST_VERSION=1.87.0
+      - CODEX_ENV_GO_VERSION=1.23.8
+      - CODEX_ENV_SWIFT_VERSION=6.1
+      
+      # Codex-specific environment variables
+      - CONTAINER=docker
+      - CODESPACE_NAME=codex
+      - OPENAI_CODEX=true
+      - SHELL=/bin/bash
+      - DEBIAN_FRONTEND=noninteractive
+      
+    volumes:
+      # Mount current directory as workspace (mirrors Codex behavior)
+      - .:/workspace/ice-webapp
+      # Mount test scripts
+      - ./tests:/workspace/tests
+      # Mount tools directory
+      - ./tools:/workspace/tools
+      
+    working_dir: /workspace/ice-webapp
+    
+    # Clone repo and keep container running for testing
+    command: bash -c "
+      echo '🔄 Cloning ICE-WEBAPP repository for testing...' &&
+      if [ ! -d /workspace/ice-webapp-repo ]; then
+        git clone https://github.com/DrJLabs/ice-webapp.git /workspace/ice-webapp-repo &&
+        echo '✅ Repository cloned successfully' ||
+        echo '⚠️ Repository clone failed - using mounted files';
+      else
+        echo '✅ Repository already exists';
+      fi &&
+      echo '🚀 Container ready for testing' &&
+      tail -f /dev/null
+    "
+    
+    # Enable networking for package installation during setup
+    network_mode: bridge
+    
+    # Set resource limits similar to Codex
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  # Test runner service - tests both mounted and cloned repo
+  codex-test-runner:
+    image: ghcr.io/openai/codex-universal:latest
+    container_name: ice-webapp-test-runner
+    environment:
+      - CODEX_ENV_NODE_VERSION=22
+      - CODEX_ENV_PYTHON_VERSION=3.12
+      - CONTAINER=docker
+      - SHELL=/bin/bash
+      - DEBIAN_FRONTEND=noninteractive
+    volumes:
+      - .:/workspace/ice-webapp
+      - ./tests:/workspace/tests
+    working_dir: /workspace
+    command: bash -c "
+      echo '🧪 Starting ICE-WEBAPP Codex Test Suite' &&
+      echo '=======================================' &&
+      
+      # Test 1: Clone fresh repository (mirrors Codex behavior)
+      echo '📥 Test 1: Testing with fresh repository clone...' &&
+      git clone https://github.com/DrJLabs/ice-webapp.git /workspace/test-repo &&
+      cd /workspace/test-repo &&
+      echo '🚀 Running setup-codex.sh on cloned repository...' &&
+      bash setup-codex.sh &&
+      echo '✅ Test 1 completed' &&
+      
+      # Test 2: Test mounted repository (development workflow)
+      echo '📁 Test 2: Testing with mounted repository...' &&
+      cd /workspace/ice-webapp &&
+      echo '🚀 Running setup-codex.sh on mounted repository...' &&
+      bash setup-codex.sh &&
+      echo '✅ Test 2 completed' &&
+      
+      echo '🎉 All tests completed'
+    "
+    depends_on:
+      - codex-mirror
+    profiles:
+      - test 

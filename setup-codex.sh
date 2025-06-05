@@ -92,33 +92,46 @@ configure_npm() {
     
     # Set optimal configurations
     npm config set registry https://registry.npmjs.org/ --global
-    npm config set timeout 300000 --global
+    npm config set fetch-retry-maxtimeout 300000 --global
     npm config set fetch-retries 5 --global
     
     success "npm configured"
 }
 
-# Install pnpm using pre-installed npm
+# Install pnpm using pre-installed npm with enhanced reliability
 install_pnpm() {
     log "Installing pnpm package manager..."
     
     if command -v pnpm >/dev/null 2>&1; then
-        log "pnpm already available: $(pnpm --version)"
+        log "pnpm already available: $(pnpm --version 2>/dev/null || echo 'detected')"
         return 0
     fi
     
-    # Use pre-installed npm to install pnpm
-    if npm install -g pnpm@latest; then
-        log "pnpm installed: $(pnpm --version)"
-        
-        # Configure pnpm
-        pnpm config set registry https://registry.npmjs.org/
-        pnpm config set store-dir ~/.pnpm-store
-        pnpm config set network-timeout 300000
-        
+    # Try multiple installation methods for maximum reliability
+    local pnpm_installed=false
+    
+    # Method 1: Use pre-installed npm (most reliable in Codex)
+    if npm install -g pnpm@latest 2>/dev/null; then
+        log "pnpm installed via npm: $(pnpm --version 2>/dev/null || echo 'installed')"
+        pnpm_installed=true
+    elif command -v corepack >/dev/null 2>&1; then
+        # Method 2: Use corepack (Node.js 16+, often available in containers)
+        log "Trying corepack for pnpm installation..."
+        if corepack enable 2>/dev/null && corepack prepare pnpm@latest --activate 2>/dev/null; then
+            log "pnpm enabled via corepack"
+            pnpm_installed=true
+        fi
+    fi
+    
+    # Configure pnpm if successfully installed
+    if [[ "$pnpm_installed" == "true" ]] && command -v pnpm >/dev/null 2>&1; then
+        pnpm config set registry https://registry.npmjs.org/ 2>/dev/null || true
+        pnpm config set store-dir ~/.pnpm-store 2>/dev/null || true
+        pnpm config set fetch-retry-maxtimeout 300000 2>/dev/null || true
         success "pnpm configured"
     else
-        warn "pnpm installation failed - continuing with npm"
+        warn "pnpm installation failed - will use npm for dependency installation"
+        log "This is normal in restricted environments like Codex"
     fi
 }
 
@@ -227,19 +240,27 @@ EOF
 EOF
 
     # Tailwind config
-    cat > tailwind.config.js << 'EOF'
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+    cat > tailwind.config.ts << 'EOF'
+import type { Config } from "tailwindcss";
+
+const config: Config = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+      },
+    },
   },
   plugins: [],
-}
+};
+
+export default config;
 EOF
 
     # Environment template
