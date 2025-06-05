@@ -89,7 +89,7 @@ verify_codex_packages() {
     success "Pre-installed packages verified"
 }
 
-# Configure npm for Codex (remove proxy warnings)
+# Configure npm for Codex (handle network restrictions gracefully)
 configure_npm() {
     log "Configuring npm for Codex environment..."
     
@@ -98,12 +98,14 @@ configure_npm() {
     npm config delete https-proxy --global 2>/dev/null || true
     npm config delete http-proxy --global 2>/dev/null || true
     
-    # Set optimal configurations
-    npm config set registry https://registry.npmjs.org/ --global
-    npm config set fetch-retry-maxtimeout 300000 --global
-    npm config set fetch-retries 5 --global
+    # Set optimal configurations with fallbacks for restricted environments
+    npm config set registry https://registry.npmjs.org/ --global 2>/dev/null || echo "npm registry config failed (network restrictions)"
+    npm config set fetch-retry-maxtimeout 60000 --global 2>/dev/null || echo "npm timeout config failed"  
+    npm config set fetch-retries 3 --global 2>/dev/null || echo "npm retries config failed"
+    npm config set fund false --global 2>/dev/null || true
+    npm config set audit false --global 2>/dev/null || true
     
-    success "npm configured"
+    success "npm configured with network restriction handling"
 }
 
 # Install pnpm using pre-installed npm with enhanced reliability
@@ -131,11 +133,14 @@ install_pnpm() {
         log "pnpm installed via npm: $(pnpm --version 2>/dev/null || echo 'installed')"
         pnpm_installed=true
     elif command -v corepack >/dev/null 2>&1; then
-        # Method 2: Use corepack (Node.js 16+, often available in containers)
+        # Method 2: Use corepack (Node.js 16+, but may fail due to network restrictions)
         log "Trying corepack for pnpm installation..."
         if corepack enable 2>/dev/null && corepack prepare pnpm@latest --activate 2>/dev/null; then
             log "pnpm enabled via corepack"
             pnpm_installed=true
+        else
+            warn "corepack failed (common in Codex due to network restrictions)"
+            log "HTTP 503 errors from repo.yarnpkg.com are expected in Codex environment"
         fi
     fi
     

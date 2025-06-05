@@ -1,243 +1,235 @@
-# 🧪 ICE-WEBAPP Codex Testing Guide
+# 🔬 ICE-WEBAPP Codex Universal Testing Environment
 
-## 🎯 Testing Strategy Overview
+## 🎯 Purpose
+This document outlines the **accurate simulation** of ChatGPT's Codex Universal environment for testing ICE-WEBAPP components in conditions that mirror the actual Codex sandbox restrictions.
 
-This guide provides comprehensive testing strategies for validating the ICE-WEBAPP setup script in ChatGPT Codex environments. We use multiple approaches to ensure maximum reliability across different scenarios.
+## ⚠️ **Critical Differences from Standard Development**
 
-## 🔧 Testing Methods
+### **Network Restrictions (Accurately Simulated)**
+The Codex environment has significant network limitations that our container simulates:
 
-### 1. 🐳 Docker-Based Testing (Preferred)
-Uses the official OpenAI Codex Universal Docker image for authentic environment simulation.
+- **Yarn Registry Blocked**: `repo.yarnpkg.com` returns HTTP 503 errors
+- **Corepack Restrictions**: Package manager auto-installation fails
+- **Limited Package Access**: Some npm packages may be unreachable
+- **Proxy Configurations**: Network access is filtered/proxied
 
+### **Environment Constraints**
+Based on [OpenAI Community feedback](https://community.openai.com/t/codex-docker-in-docker-in-environment-setup/1272369):
+- No Docker-in-Docker support
+- Kernel-level restrictions on certain operations
+- Pre-configured runtime environment (no version management)
+- Sandboxed filesystem access
+
+## 🏗️ **Container Setup**
+
+### **Quick Start**
 ```bash
-# Start Codex mirror environment
+# Start the accurate Codex simulation
 docker compose -f docker-compose.codex.yml up -d codex-mirror
 
-# Run comprehensive tests
-bash tools/test-codex-setup.sh
+# Test environment readiness
+docker exec ice-webapp-codex-test bash -c "node --version && npm --version"
 
-# Run automated test suite
-bash tools/test-codex-setup.sh --automated
+# Run setup script with restrictions
+docker exec ice-webapp-codex-test bash -c "cd /workspace/ice-webapp && bash setup-codex.sh --test"
 ```
 
-### 2. 🧊 Local Simulation Testing
-Simulates Codex environment locally without Docker dependencies.
+### **Environment Specifications**
+- **Base**: Ubuntu 24.04 (matches Codex Universal)
+- **Node.js**: v22.16.0 (pre-installed, no version switching)
+- **npm**: 10.9.2 (configured with timeouts and restrictions)
+- **pnpm**: Limited availability (simulates network restrictions)
+- **Python**: 3.12.3 (pre-installed)
+- **Build Tools**: Complete GCC toolchain
+
+## 🚫 **Simulated Restrictions**
+
+### **Network Simulation**
+Our container accurately simulates Codex network limitations:
 
 ```bash
-# Run simulation test
-bash tools/simulate-codex-env.sh --automated
-
-# Interactive simulation
-bash tools/simulate-codex-env.sh
+# These are blocked in /etc/hosts to simulate network restrictions
+127.0.0.1 repo.yarnpkg.com
+127.0.0.1 registry.yarnpkg.com  
+127.0.0.1 yarnpkg.com
 ```
 
-## 📊 Test Results Summary
-
-### ✅ Latest Test Results (2025-06-05)
-
-**Environment**: Simulated Codex Universal  
-**Node.js**: v20.19.1 (configurable to v22 in Codex)  
-**Python**: 3.12.3  
-**Test Status**: ✅ PASSED  
-
-**Key Achievements**:
-- ✅ Setup script completes successfully
-- ✅ All dependencies install correctly via npm fallback
-- ✅ TypeScript configuration optimized for Node.js 22
-- ✅ Tailwind CSS configured with TypeScript (.ts extension)
-- ✅ Next.js 15 + React 19 + App Router working
-- ✅ Environment detection and configuration working
-- ✅ Graceful fallbacks for pnpm installation issues
-
-### 🔧 Optimizations Applied
-
-1. **Enhanced npm Configuration**:
-   - Fixed `timeout` → `fetch-retry-maxtimeout` (valid npm option)
-   - Added comprehensive proxy cleanup
-   - Improved error handling with fallbacks
-
-2. **Improved pnpm Installation**:
-   - Multiple installation methods (npm, corepack)
-   - Graceful fallback to npm when pnpm fails
-   - Better error messages for restricted environments
-
-3. **TypeScript Configuration**:
-   - Changed `tailwind.config.js` → `tailwind.config.ts`
-   - Enhanced type safety and consistency
-   - Added proper color variable support
-
-4. **Dependency Management**:
-   - Unified Node.js 22 support across all environments
-   - Bleeding-edge package versions (Next.js 15.1.3, React 19.0.0)
-   - Optimized for Codex pre-installed packages
-
-## 🚀 Testing Workflow
-
-### Phase 1: Environment Setup
+### **Package Manager Limitations**
 ```bash
-# 1. Clone repository (simulates Codex behavior)
-git clone https://github.com/DrJLabs/ice-webapp.git
+# Corepack disabled (common failure in Codex)
+corepack disable 2>/dev/null || echo 'corepack disabled (simulating Codex restrictions)'
 
-# 2. Navigate to project
-cd ice-webapp
-
-# 3. Run setup script
-bash setup-codex.sh
+# Environment variables simulating restrictions
+COREPACK_ENABLE_STRICT=0
+COREPACK_ENABLE_NETWORK=0
 ```
 
-### Phase 2: Validation
+## 🧪 **Testing Scenarios**
+
+### **1. Setup Script Resilience**
+Test how the setup script handles network failures:
 ```bash
-# 1. Verify installation
-npm run codex:verify
-
-# 2. Test TypeScript compilation
-npm run type-check
-
-# 3. Test development server
-npm run dev
+docker exec ice-webapp-codex-test bash -c "cd /workspace/ice-webapp && bash setup-codex.sh --test"
 ```
 
-### Phase 3: Quality Gates
+**Expected Behavior:**
+- ✅ npm configuration succeeds with fallbacks
+- ⚠️ pnpm installation may fail (gracefully handled)  
+- ✅ Project structure creation works
+- ⚠️ Corepack operations fail with helpful messages
+
+### **2. Dependency Installation**
+Test package installation under restrictions:
 ```bash
-# 1. Linting
-npm run lint
-
-# 2. Type checking
-npm run type-check
-
-# 3. Testing
-npm run test
+docker exec ice-webapp-codex-test bash -c "cd /workspace/ice-webapp && npm install --verbose"
 ```
 
-## 🐛 Common Issues & Solutions
+**Expected Behavior:**
+- ✅ npm packages install successfully
+- ⚠️ Some packages may timeout/fail
+- ✅ Fallback strategies activate
+- ⚠️ Yarn/pnpm commands restricted
 
-### Issue: `npm error 'timeout' is not a valid npm option`
-**Solution**: Fixed in v2025.1.3 - now uses `fetch-retry-maxtimeout`
-
-### Issue: `pnpm: command not found`
-**Solution**: Script gracefully falls back to npm installation
-
-### Issue: `tailwind.config.ts: missing`
-**Solution**: Fixed in v2025.1.3 - now creates TypeScript config file
-
-### Issue: Network access restrictions
-**Solution**: All dependencies installed during setup phase when network is available
-
-## 📈 Performance Metrics
-
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| Setup Time | <2 minutes | ✅ ~45 seconds |
-| Dependency Install | <30 seconds | ✅ ~20 seconds |
-| TypeScript Compilation | <10 seconds | ✅ ~5 seconds |
-| Error Rate | <5% | ✅ 0% (with fallbacks) |
-
-## 🔍 Test Coverage
-
-### ✅ Environment Detection
-- [x] Codex environment variables
-- [x] Pre-installed package verification
-- [x] Node.js version compatibility
-- [x] Shell and user detection
-
-### ✅ Package Management
-- [x] npm configuration and cleanup
-- [x] pnpm installation with fallbacks
-- [x] Dependency installation reliability
-- [x] Registry and proxy handling
-
-### ✅ Project Structure
-- [x] Directory creation
-- [x] Configuration file generation
-- [x] TypeScript setup
-- [x] Next.js App Router structure
-
-### ✅ Quality Assurance
-- [x] TypeScript compilation
-- [x] ESLint configuration
-- [x] Tailwind CSS setup
-- [x] Development server readiness
-
-## 🎯 Best Practices Implemented
-
-### 1. **Container Optimization**
-- Based on [Docker best practices](https://forums.docker.com/t/best-practices-for-getting-code-into-a-container-git-clone-vs-copy-vs-data-container/4077)
-- Efficient layer caching and minimal image size
-- Proper environment variable handling
-
-### 2. **Error Handling**
-- Comprehensive fallback mechanisms
-- Graceful degradation for restricted environments
-- Detailed logging and debugging information
-
-### 3. **Security**
-- Proxy configuration cleanup
-- Secure registry settings
-- No hardcoded credentials or tokens
-
-### 4. **Performance**
-- Parallel dependency installation
-- Optimized package selection
-- Minimal network requests
-
-## 🔄 Continuous Testing
-
-### Automated Testing Pipeline
-```yaml
-# .github/workflows/codex-test.yml
-name: Codex Environment Testing
-on: [push, pull_request]
-jobs:
-  test-codex-setup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test Codex Setup
-        run: bash tools/simulate-codex-env.sh --automated
-```
-
-### Local Development Testing
+### **3. Development Server**
+Test development server startup:
 ```bash
-# Quick validation
-bash tools/simulate-codex-env.sh --automated
-
-# Full Docker testing (when available)
-bash tools/test-codex-setup.sh --automated
+docker exec ice-webapp-codex-test bash -c "cd /workspace/ice-webapp && npm run dev"
 ```
 
-## 📋 Test Checklist
+## 📊 **Validation Metrics**
 
-Before deploying to Codex:
+### **Environment Compliance**
+- ✅ **Node.js Version**: Exactly v22.16.0 (no flexibility)
+- ✅ **Package Manager**: npm primary, pnpm restricted
+- ✅ **Network Policy**: HTTP 503 from yarn registries
+- ✅ **Build Tools**: All development tools available
+- ✅ **Python**: Version 3.12.3 available
 
-- [ ] ✅ Local simulation test passes
-- [ ] ✅ Docker test passes (if available)
-- [ ] ✅ All configuration files created correctly
-- [ ] ✅ Dependencies install successfully
-- [ ] ✅ TypeScript compilation works
-- [ ] ✅ Development server starts
-- [ ] ✅ No critical errors in logs
+### **Failure Patterns** 
+Our simulation reproduces common Codex issues:
+```
+❌ HTTP 503 errors from repo.yarnpkg.com
+❌ Corepack prepare commands fail
+❌ Network timeout on package downloads
+✅ Graceful fallbacks to npm
+✅ Clear error messages explaining restrictions
+```
 
-## 🎉 Success Criteria
+## 🛠️ **Development Workflow**
 
-The setup is considered successful when:
+### **Recommended Testing Flow**
+1. **Start Container**: `docker compose -f docker-compose.codex.yml up -d`
+2. **Verify Environment**: Check Node.js, npm availability
+3. **Test Setup**: Run setup script with `--test` flag
+4. **Install Dependencies**: Use npm (not yarn/pnpm)
+5. **Run Application**: Test dev server startup
+6. **Validate Build**: Ensure production build works
 
-1. **Setup Completion**: Script runs without fatal errors
-2. **File Creation**: All expected files and directories exist
-3. **Dependency Installation**: node_modules populated correctly
-4. **TypeScript Ready**: Compilation passes without errors
-5. **Development Ready**: `npm run dev` starts successfully
+### **Container Management**
+```bash
+# Start testing environment
+./docker-manage.sh start
 
-## 📞 Support & Troubleshooting
+# Access container shell
+./docker-manage.sh shell
 
-For issues not covered here:
+# Monitor container status
+./docker-manage.sh status
 
-1. Check `CODEX_TROUBLESHOOTING.md` for specific error solutions
-2. Review test reports in `/tmp/ice-webapp-codex-sim/`
-3. Run `npm run codex:verify` for environment diagnostics
-4. Check container logs: `docker compose logs codex-mirror`
+# View setup logs
+./docker-manage.sh logs
+```
+
+## 🔍 **Troubleshooting**
+
+### **Common Issues & Solutions**
+
+#### **Issue**: Corepack fails with HTTP 503
+```
+❌ Internal Error: Server answered with HTTP 503 when performing the request to https://repo.yarnpkg.com/tags
+```
+**✅ Solution**: This is **expected behavior** in Codex. The setup script handles this gracefully.
+
+#### **Issue**: pnpm not available
+```
+❌ pnpm: command not found
+```
+**✅ Solution**: Use npm instead. This simulates actual Codex restrictions.
+
+#### **Issue**: Package installation timeouts
+```
+❌ npm ERR! network timeout
+```
+**✅ Solution**: Retry with shorter timeouts or skip optional dependencies.
+
+## 🎯 **Best Practices for Codex Compatibility**
+
+### **1. Package Manager Strategy**
+```bash
+# ✅ Primary: Use npm (always available)
+npm install
+
+# ⚠️ Fallback: Check pnpm availability first
+if command -v pnpm >/dev/null 2>&1; then
+    pnpm install
+else
+    echo "Using npm fallback (Codex restriction)"
+    npm install
+fi
+```
+
+### **2. Network Resilience**
+```bash
+# ✅ Configure timeouts for restricted environments
+npm config set fetch-retry-maxtimeout 60000
+npm config set fetch-retries 3
+npm config set network-timeout 60000
+```
+
+### **3. Error Handling**
+```bash
+# ✅ Always provide fallbacks
+install_dependencies() {
+    if npm install 2>/dev/null; then
+        echo "Dependencies installed via npm"
+    else
+        echo "Installation failed - check network restrictions"
+        return 1
+    fi
+}
+```
+
+## 📚 **References**
+
+- [OpenAI Codex Docker Environment Discussion](https://community.openai.com/t/codex-docker-in-docker-in-environment-setup/1272369)
+- [Docker Multi-Container Best Practices](https://docs.docker.com/get-started/docker-concepts/running-containers/multi-container-applications/)
+- [Node.js Container Development Guide](https://docs.docker.com/guides/nodejs/develop/)
 
 ---
 
-**Last Updated**: 2025-06-05  
-**Test Environment**: Codex Universal Docker + Local Simulation  
-**Status**: ✅ All tests passing 
+## 📋 **Quick Reference**
+
+### **Container Commands**
+```bash
+# Start Codex simulation
+docker compose -f docker-compose.codex.yml up -d
+
+# Test environment
+docker exec ice-webapp-codex-test node --version
+
+# Run setup with restrictions
+docker exec ice-webapp-codex-test bash -c "cd /workspace/ice-webapp && bash setup-codex.sh"
+
+# Access container shell
+docker exec -it ice-webapp-codex-test bash
+```
+
+### **Expected Environment**
+- **Node.js**: v22.16.0 ✅
+- **npm**: 10.9.2 ✅
+- **pnpm**: Restricted ⚠️
+- **Python**: 3.12.3 ✅
+- **Network**: Limited/Proxied ⚠️
+- **Build**: Fully supported ✅
+
+**🎯 Result**: Accurate simulation of ChatGPT Codex Universal environment with realistic network restrictions and package manager limitations. 

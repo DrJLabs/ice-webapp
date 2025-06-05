@@ -10,12 +10,17 @@ services:
       - CODEX_ENV_GO_VERSION=1.23.8
       - CODEX_ENV_SWIFT_VERSION=6.1
       
-      # Codex-specific environment variables
+      # Codex-specific environment variables  
       - CONTAINER=docker
       - CODESPACE_NAME=codex
       - OPENAI_CODEX=true
       - SHELL=/bin/bash
       - DEBIAN_FRONTEND=noninteractive
+      
+      # Simulate Codex network restrictions
+      - COREPACK_ENABLE_STRICT=0
+      - COREPACK_ENABLE_NETWORK=0
+      - NODE_OPTIONS="--no-warnings"
       
     volumes:
       # Mount current directory as workspace (mirrors Codex behavior)
@@ -27,21 +32,27 @@ services:
       
     working_dir: /workspace/ice-webapp
     
-    # Setup Codex environment and keep container running
+    # Setup Codex environment with network restrictions simulation
     command: >
       bash -c "
-      echo '🔧 Setting up ICE-WEBAPP Codex Universal environment...' &&
+      echo '🔧 Setting up ICE-WEBAPP Codex Universal environment with network restrictions...' &&
       apt-get update -qq &&
-      apt-get install -y -qq curl wget git build-essential python3 python3-pip &&
+      apt-get install -y -qq curl wget git build-essential python3 python3-pip iptables dnsutils &&
       curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&
       apt-get install -y -qq nodejs &&
-      npm install -g pnpm@latest &&
-      echo '✅ Environment setup completed' &&
+      echo '⚠️  Simulating Codex network restrictions...' &&
+      echo '127.0.0.1 repo.yarnpkg.com' >> /etc/hosts &&
+      echo '127.0.0.1 registry.yarnpkg.com' >> /etc/hosts &&
+      echo '127.0.0.1 yarnpkg.com' >> /etc/hosts &&
+      npm config set registry https://registry.npmjs.org/ &&
+      npm install -g pnpm@latest 2>/dev/null || echo 'pnpm install failed (simulating network restrictions)' &&
+      corepack disable 2>/dev/null || echo 'corepack disabled (simulating Codex restrictions)' &&
+      echo '✅ Environment setup completed with Codex-like restrictions' &&
       echo 'Node.js:' && node --version &&
       echo 'npm:' && npm --version &&
-      echo 'pnpm:' && pnpm --version &&
+      echo 'pnpm:' && (pnpm --version 2>/dev/null || echo 'restricted by network policy') &&
       echo 'Python:' && python3 --version &&
-      echo '🚀 ICE-WEBAPP Codex Universal container ready' &&
+      echo '🔬 ICE-WEBAPP Codex Universal container ready (with simulated restrictions)' &&
       sleep infinity
       "
     
