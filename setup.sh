@@ -2,8 +2,28 @@
 #
 # ICE-WEBAPP Setup Script - Bleeding Edge AI-Optimized Web Development Environment
 # Designed for ChatGPT Codex usage with absolute dependency management cohesion
-# Version: 2025.1.0 - Optimized for rapid web app development
+# Version: 2025.1.1 - Now with robust error reporting for container environments
 #
+
+# --- Robust Error-Handling Setup ---
+set -x # Enable command tracing
+DEBUG_MESSAGES=()
+FAILED_COMMANDS=0
+
+run_command() {
+    local cmd_string="$1"
+    local description="$2"
+    log "--- [START] $description ---"
+    if ! eval "$cmd_string"; then
+        local error_msg="--- [FAILED] '$description' ---"
+        warn "$error_msg"
+        DEBUG_MESSAGES+=("Task: '$description' | Command: '$cmd_string'")
+        ((FAILED_COMMANDS++))
+    else
+        success "--- [SUCCESS] '$description' ---"
+    fi
+}
+# --- End Error-Handling Setup ---
 
 set -Eeuo pipefail
 IFS=$'\n\t'
@@ -43,8 +63,10 @@ warn() {
 }
 
 error() {
-    echo -e "${RED}[ERROR] $*${NC}" >&2
-    exit 1
+    local msg="[ERROR] $*"
+    warn "$msg"
+    DEBUG_MESSAGES+=("$msg")
+    ((FAILED_COMMANDS++))
 }
 
 info() {
@@ -87,16 +109,8 @@ detect_environment() {
 # System dependencies setup
 setup_system_dependencies() {
     log "Setting up system dependencies..."
-    
-    # Update package lists
-    if command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get update -qq
-        sudo apt-get install -y curl wget git build-essential ca-certificates gnupg lsb-release
-    elif command -v yum >/dev/null 2>&1; then
-        sudo yum update -y
-        sudo yum groupinstall -y "Development Tools"
-        sudo yum install -y curl wget git
-    fi
+    run_command "sudo apt-get update -qq" "Update apt package lists"
+    run_command "sudo apt-get install -y curl wget git build-essential ca-certificates gnupg lsb-release" "Install base packages"
 }
 
 # Node.js setup with bleeding edge version
@@ -107,35 +121,23 @@ setup_nodejs() {
     export SHELL="${SHELL:-/bin/bash}"
     
     # Clear npm proxy warnings for clean environments
-    unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy
+    run_command "unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy" "Unset proxy variables"
     
     # Install Node.js via NodeSource with retry mechanism
-    local retry_count=0
-    local max_retries=3
-    
-    while [ $retry_count -lt $max_retries ]; do
-        if curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -; then
-            break
-        fi
-        retry_count=$((retry_count + 1))
-        log "Retry $retry_count/$max_retries for NodeSource setup..."
-        sleep 2
-    done
+    run_command "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -" "Set up NodeSource repository"
     
     # Force install specific Node.js version
-    sudo apt-get install -y nodejs
+    run_command "sudo apt-get install -y nodejs" "Install Node.js"
     
-    # Verify Node.js version and force if needed
+    # Verify Node.js version and handle mismatch
     current_version=$(node --version)
     log "Current Node.js version: $current_version"
     
     if [[ ! "$current_version" =~ ^v22\. ]]; then
         warn "Node.js version mismatch, forcing v22.x installation..."
-        # Remove existing Node.js
-        sudo apt-get remove -y nodejs npm
-        # Clean install
-        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-        sudo apt-get install -y nodejs
+        run_command "sudo apt-get remove -y nodejs npm" "Remove conflicting Node.js version"
+        run_command "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -" "Re-run NodeSource setup"
+        run_command "sudo apt-get install -y nodejs" "Install correct Node.js version"
     fi
     
     # Verify final installation
@@ -149,10 +151,10 @@ setup_nodejs() {
         # Codex-specific pnpm installation
         export SHELL="/bin/bash"
         export PNPM_HOME="$HOME/.local/share/pnpm"
-        mkdir -p "$PNPM_HOME"
+        run_command "mkdir -p \"$PNPM_HOME\"" "Create pnpm home directory"
         
         # Download and install pnpm manually for containers
-        curl -fsSL https://get.pnpm.io/install.sh | SHELL=/bin/bash sh -
+        run_command "curl -fsSL https://get.pnpm.io/install.sh | SHELL=/bin/bash sh -" "Install pnpm"
         
         # Add to PATH immediately
         export PATH="$PNPM_HOME:$PATH"
@@ -163,28 +165,26 @@ setup_nodejs() {
         
     else
         # Standard installation for other environments
-        curl -fsSL https://get.pnpm.io/install.sh | sh -
+        run_command "curl -fsSL https://get.pnpm.io/install.sh | sh -" "Install pnpm"
         source ~/.bashrc 2>/dev/null || export PATH="$HOME/.local/share/pnpm:$PATH"
     fi
     
     # Verify pnpm installation
-    if command -v pnpm >/dev/null 2>&1; then
-        log "pnpm version: $(pnpm --version)"
-    else
+    if ! command -v pnpm >/dev/null 2>&1; then
         error "pnpm installation failed"
         return 1
     fi
     
     # Configure npm/pnpm for speed and reliability
-    npm config set registry https://registry.npmjs.org/ --global
-    npm config delete proxy --global 2>/dev/null || true
-    npm config delete https-proxy --global 2>/dev/null || true
+    run_command "npm config set registry https://registry.npmjs.org/ --global" "Set npm registry"
+    run_command "npm config delete proxy --global" "Delete npm proxy config"
+    run_command "npm config delete https-proxy --global" "Delete npm https-proxy config"
     
     if command -v pnpm >/dev/null 2>&1; then
-        pnpm config set registry https://registry.npmjs.org/
-        pnpm config set store-dir ~/.pnpm-store
-        pnpm config set network-timeout 300000
-        pnpm config set fetch-retries 5
+        run_command "pnpm config set registry https://registry.npmjs.org/" "Set pnpm registry"
+        run_command "pnpm config set store-dir ~/.pnpm-store" "Set pnpm store directory"
+        run_command "pnpm config set network-timeout 300000" "Set pnpm network timeout"
+        run_command "pnpm config set fetch-retries 5" "Set pnpm fetch retries"
     fi
     
     success "Node.js ${NODE_VERSION} and pnpm setup completed"
@@ -193,19 +193,13 @@ setup_nodejs() {
 # Python setup for AI/ML tools
 setup_python() {
     log "Setting up Python ${PYTHON_VERSION}..."
-    
-    # Install Python via deadsnakes PPA for latest version
-    sudo add-apt-repository ppa:deadsnakes/ppa -y
-    sudo apt-get update
-    sudo apt-get install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-venv python${PYTHON_VERSION}-pip python${PYTHON_VERSION}-dev
-    
-    # Create symlinks
-    sudo ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python3
-    sudo ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python
-    
-    # Install pip packages for AI optimization
-    python3 -m pip install --upgrade pip
-    python3 -m pip install uv  # Ultra-fast Python package installer
+    run_command "sudo add-apt-repository ppa:deadsnakes/ppa -y" "Add deadsnakes PPA"
+    run_command "sudo apt-get update" "Update apt after adding PPA"
+    run_command "sudo apt-get install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-venv python${PYTHON_VERSION}-pip python${PYTHON_VERSION}-dev" "Install Python and tools"
+    run_command "sudo ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python3" "Set python3 symlink"
+    run_command "sudo ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python" "Set python symlink"
+    run_command "python3 -m pip install --upgrade pip" "Upgrade pip"
+    run_command "python3 -m pip install uv" "Install uv package installer"
 }
 
 # Codacy CLI setup (from existing script)
@@ -757,5 +751,20 @@ EOF
     echo "  3. Start building your web application!"
 }
 
-# Execute main function
+print_debug_report() {
+    echo
+    echo "=================================================="
+    echo "=== 📜 SCRIPT EXECUTION DEBUG REPORT 📜 ==="
+    echo "=================================================="
+    if [ "$FAILED_COMMANDS" -eq 0 ]; then
+        echo "✅ All setup commands appeared to execute successfully."
+    else
+        echo "❌ Found $FAILED_COMMANDS command(s) that failed:"
+        printf " • %s\\n" "${DEBUG_MESSAGES[@]}"
+    fi
+    echo "=================================================="
+    echo
+}
+
+# Run main function
 main "$@" 
