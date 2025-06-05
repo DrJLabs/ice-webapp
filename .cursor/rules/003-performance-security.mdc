@@ -5,11 +5,7 @@ alwaysApply: false
 ---
 ---
 description: "Performance optimization and security standards for ICE-WEBAPP with automated quality gate integration"
-when: auto
-globs:
-  - "src/**/*.{ts,tsx}"
-  - "app/**/*.{ts,tsx}"
-  - "api/**/*.{ts,tsx}"
+globs: "src/**/*.{ts,tsx}, app/**/*.{ts,tsx}, api/**/*.{ts,tsx}"
 ---
 
 # Performance and Security Standards for ICE-WEBAPP
