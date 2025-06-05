@@ -84,7 +84,17 @@ verify_codex_packages() {
     command -v python3 >/dev/null 2>&1 && log "Python: $(python3 --version)"
     command -v bun >/dev/null 2>&1 && log "Bun: $(bun --version)"
     command -v java >/dev/null 2>&1 && log "Java: available"
-    command -v go >/dev/null 2>&1 && log "Go: $(go version | cut -d' ' -f3)"
+    
+    # Go verification (robust check to prevent script failure if Go is broken)
+    if command -v go >/dev/null 2>&1; then
+        if go_version_output=$(go version 2>/dev/null); then
+            log "Go: $(echo "$go_version_output" | cut -d' ' -f3)"
+        else
+            warn "Go command found, but 'go version' failed. Continuing, as Go is not critical."
+        fi
+    else
+        log "Go: not found (this is OK for ICE-WEBAPP)"
+    fi
     
     success "Pre-installed packages verified"
 }
