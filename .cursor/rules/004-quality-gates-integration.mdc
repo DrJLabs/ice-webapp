@@ -3,6 +3,14 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: "Comprehensive quality gates integration enforcing ICE-WEBAPP standards with AGENTS.md compliance"
+when: always
+globs:
+  - "**/*.{ts,tsx,js,jsx}"
+  - "**/*.md"
+---
+
 # Quality Gates Integration for ICE-WEBAPP
 
 ## Mandatory Quality Gate Sequence

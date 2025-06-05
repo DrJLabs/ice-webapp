@@ -1,12 +1,12 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 ---
 description: "Enforces ICE-WEBAPP development workflow and quality gates - must be followed on every Cursor AI session without exception"
-globs: ""
-alwaysApply: true
+when: always
+globs: []
 ---
 
 # 🧊 MANDATORY ICE-WEBAPP WORKFLOW

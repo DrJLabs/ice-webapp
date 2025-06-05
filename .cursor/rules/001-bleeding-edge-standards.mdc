@@ -1,12 +1,16 @@
 ---
-description:
-globs:
+description: 
+globs: src/**/*.{ts,tsx,js,jsx}
 alwaysApply: false
 ---
 ---
 description: "Bleeding-edge development standards for Next.js 15, React 19, TypeScript 5.7, and modern web development practices"
-globs: "src/**/*.{ts,tsx,js,jsx}, pages/**/*.{ts,tsx}, app/**/*.{ts,tsx}, components/**/*.{ts,tsx}"
-alwaysApply: false
+when: auto
+globs:
+  - "src/**/*.{ts,tsx,js,jsx}"
+  - "pages/**/*.{ts,tsx}"
+  - "app/**/*.{ts,tsx}"
+  - "components/**/*.{ts,tsx}"
 ---
 
 # Bleeding-Edge Development Standards for ICE-WEBAPP

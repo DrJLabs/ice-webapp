@@ -5,8 +5,11 @@ alwaysApply: false
 ---
 ---
 description: "AI development patterns and prompt optimization for ChatGPT Codex integration with ICE-WEBAPP"
-globs: "ai/**/*.md, src/**/*.{ts,tsx}, app/**/*.{ts,tsx}"
-alwaysApply: false
+when: auto
+globs:
+  - "ai/**/*.md"
+  - "src/**/*.{ts,tsx}"
+  - "app/**/*.{ts,tsx}"
 ---
 
 # AI Development Patterns for ICE-WEBAPP
