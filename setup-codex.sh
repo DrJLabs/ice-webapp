@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # ICE-WEBAPP Codex Setup Script - Optimized for ChatGPT Codex Pre-installed Environment
-# Leverages Codex pre-installed packages: Node.js 20, Python 3.12, Bun 1.2.14, etc.
+# Leverages Codex pre-installed packages: Node.js 22, Python 3.12, Bun 1.2.14, etc.
 # Based on OpenAI Codex environment specifications and community best practices
 # Version: 2025.1.1 - Codex Optimized
 #
@@ -68,10 +68,17 @@ success() {
 detect_codex_environment() {
     info "Detecting ChatGPT Codex environment..."
     
-    # Codex-specific environment checks
-    if [[ "$USER" == "root" ]] && \
-       [[ -z "${SUDO_USER:-}" ]] && \
-       [[ -f "/.dockerenv" || -n "${CONTAINER:-}" ]]; then
+    # Codex-specific environment checks using parameter expansion to handle unbound variables
+    local current_user="${USER:-$(whoami 2>/dev/null || echo 'unknown')}"
+    local sudo_user="${SUDO_USER:-}"
+    local container_env="${CONTAINER:-}"
+    
+    # Debug information
+    info "Environment check - User: $current_user, Container: ${container_env:-'not set'}"
+    
+    if [[ "$current_user" == "root" ]] && \
+       [[ -z "$sudo_user" ]] && \
+       [[ -f "/.dockerenv" || -n "$container_env" ]]; then
         echo "codex"
     else
         echo "unknown"

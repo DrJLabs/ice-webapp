@@ -82,6 +82,17 @@ chmod +x ~/.local/share/pnpm/pnpm
 export PATH="~/.local/share/pnpm:$PATH"
 ```
 
+### 5. **Unbound Variable Error**
+```
+/setup_script.sh: line 76: USER: unbound variable
+```
+
+**Cause**: Environment variables like `USER` are not set in some Codex containers.
+
+**Fix**: The updated script now handles unbound variables using parameter expansion:
+- Uses `${USER:-$(whoami)}` to provide fallback values
+- Safe environment variable checking throughout the script
+
 ## 🚀 Codex-Optimized Workflow
 
 ### Recommended Codex Setup Process:

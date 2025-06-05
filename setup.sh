@@ -57,17 +57,27 @@ success() {
 
 # Detect environment type with improved Codex detection
 detect_environment() {
+    # Use parameter expansion to handle unbound variables safely
+    local current_user="${USER:-$(whoami 2>/dev/null || echo 'unknown')}"
+    local sudo_user="${SUDO_USER:-}"
+    local codex_env="${CODEX_ENVIRONMENT:-}"
+    local github_codespace="${GITHUB_CODESPACE_NAME:-}"
+    local openai_codex="${OPENAI_CODEX:-}"
+    local container_env="${CONTAINER:-}"
+    local cursor_session="${CURSOR_SESSION:-}"
+    local ci_env="${CI:-}"
+    
     # Check for Codex/container environments
-    if [[ -n "${CODEX_ENVIRONMENT:-}" ]] || \
-       [[ -n "${GITHUB_CODESPACE_NAME:-}" ]] || \
-       [[ -n "${OPENAI_CODEX:-}" ]] || \
+    if [[ -n "$codex_env" ]] || \
+       [[ -n "$github_codespace" ]] || \
+       [[ -n "$openai_codex" ]] || \
        [[ -f "/.dockerenv" ]] || \
-       [[ "$USER" == "root" && -z "${SUDO_USER:-}" ]] || \
-       [[ -n "${CONTAINER:-}" ]]; then
+       [[ "$current_user" == "root" && -z "$sudo_user" ]] || \
+       [[ -n "$container_env" ]]; then
         echo "codex"
-    elif [[ -n "${CURSOR_SESSION:-}" ]]; then
+    elif [[ -n "$cursor_session" ]]; then
         echo "cursor"
-    elif [[ -n "${CI:-}" ]]; then
+    elif [[ -n "$ci_env" ]]; then
         echo "ci"
     else
         echo "local"
@@ -660,7 +670,8 @@ optimize_for_codex() {
     unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
     
     # Optimize apt for containers (check if running as root)
-    if [[ "$USER" == "root" ]]; then
+    local current_user="${USER:-$(whoami 2>/dev/null || echo 'unknown')}"
+    if [[ "$current_user" == "root" ]]; then
         # No sudo needed - already root in Codex
         echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries 2>/dev/null || true
         echo 'Acquire::http::Timeout "60";' > /etc/apt/apt.conf.d/80-timeout 2>/dev/null || true
