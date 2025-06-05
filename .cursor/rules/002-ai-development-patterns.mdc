@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: 
+globs: ai/**/*.md,src/**/*.ts,src/**/*.tsx,app/**/*.ts,app/**/*.tsx
 alwaysApply: false
 ---
 ---

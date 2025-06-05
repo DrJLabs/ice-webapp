@@ -1,6 +1,6 @@
 ---
 description: 
-globs: src/**/*.{ts,tsx,js,jsx}
+globs: src/**/*.ts,src/**/*.tsx,src/**/*.js,src/**/*.jsx,pages/**/*.ts,pages/**/*.tsx,app/**/*.ts,app/**/*.tsx,components/**/*.ts,components/**/*.tsx
 alwaysApply: false
 ---
 ---
