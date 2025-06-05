@@ -98,6 +98,9 @@ configure_npm() {
     npm config delete https-proxy --global 2>/dev/null || true
     npm config delete http-proxy --global 2>/dev/null || true
     
+    # Clear npm cache to prevent corruption issues
+    npm cache clean --force 2>/dev/null || true
+    
     # Set optimal configurations with fallbacks for restricted environments
     npm config set registry https://registry.npmjs.org/ --global 2>/dev/null || echo "npm registry config failed (network restrictions)"
     npm config set fetch-retry-maxtimeout 60000 --global 2>/dev/null || echo "npm timeout config failed"  
@@ -105,7 +108,18 @@ configure_npm() {
     npm config set fund false --global 2>/dev/null || true
     npm config set audit false --global 2>/dev/null || true
     
-    success "npm configured with network restriction handling"
+    # CRITICAL FIX: npm 11.x corepack bug (npm/cli#8075)
+    local npm_version=$(npm --version 2>/dev/null || echo "unknown")
+    if [[ "$npm_version" =~ ^11\. ]]; then
+        log "Detected npm $npm_version - applying corepack fix for npm/cli#8075..."
+        if npm install -g corepack@latest 2>/dev/null; then
+            log "✅ Updated corepack to fix npm 11.x compatibility issue"
+        else
+            warn "⚠️  Could not update corepack, will use npm fallbacks"
+        fi
+    fi
+    
+    success "npm configured with network restriction handling and corepack fix"
 }
 
 # Install pnpm using pre-installed npm with enhanced reliability
@@ -125,22 +139,32 @@ install_pnpm() {
         return 0
     fi
     
-    # Try multiple installation methods for maximum reliability
+    # Check npm version for corepack compatibility
+    local npm_version=$(npm --version 2>/dev/null || echo "unknown")
     local pnpm_installed=false
     
-    # Method 1: Use pre-installed npm (most reliable in Codex)
+    # ALWAYS try npm first (most reliable method)
+    log "Installing pnpm via npm (recommended for Codex)..."
     if npm install -g pnpm@latest 2>/dev/null; then
-        log "pnpm installed via npm: $(pnpm --version 2>/dev/null || echo 'installed')"
+        log "✅ pnpm installed via npm: $(pnpm --version 2>/dev/null || echo 'installed')"
         pnpm_installed=true
-    elif command -v corepack >/dev/null 2>&1; then
-        # Method 2: Use corepack (Node.js 16+, but may fail due to network restrictions)
-        log "Trying corepack for pnpm installation..."
-        if corepack enable 2>/dev/null && corepack prepare pnpm@latest --activate 2>/dev/null; then
-            log "pnpm enabled via corepack"
-            pnpm_installed=true
+    else
+        warn "npm install failed, trying alternative methods..."
+    fi
+    
+    # Only try corepack if npm method failed AND it's not npm 11.x (due to bug npm/cli#8075)
+    if [[ "$pnpm_installed" == "false" ]] && command -v corepack >/dev/null 2>&1; then
+        if [[ "$npm_version" =~ ^11\. ]]; then
+            warn "⚠️  Skipping corepack due to npm 11.x bug (npm/cli#8075)"
+            log "This prevents HTTP 503 errors from repo.yarnpkg.com"
         else
-            warn "corepack failed (common in Codex due to network restrictions)"
-            log "HTTP 503 errors from repo.yarnpkg.com are expected in Codex environment"
+            log "Trying corepack for pnpm installation..."
+            if corepack enable 2>/dev/null && corepack prepare pnpm@latest --activate 2>/dev/null; then
+                log "✅ pnpm enabled via corepack"
+                pnpm_installed=true
+            else
+                warn "corepack failed (common in restricted environments)"
+            fi
         fi
     fi
     
@@ -149,7 +173,7 @@ install_pnpm() {
         pnpm config set registry https://registry.npmjs.org/ 2>/dev/null || true
         pnpm config set store-dir ~/.pnpm-store 2>/dev/null || true
         pnpm config set fetch-retry-maxtimeout 300000 2>/dev/null || true
-        success "pnpm configured"
+        success "pnpm configured and ready"
     else
         warn "pnpm installation failed - will use npm for dependency installation"
         log "This is normal in restricted environments like Codex"

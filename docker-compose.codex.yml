@@ -32,27 +32,34 @@ services:
       
     working_dir: /workspace/ice-webapp
     
-    # Setup Codex environment with network restrictions simulation
+    # Setup accurate Codex environment avoiding npm 11.x corepack bug
     command: >
       bash -c "
-      echo '🔧 Setting up ICE-WEBAPP Codex Universal environment with network restrictions...' &&
+      echo '🔧 Setting up ICE-WEBAPP Codex Universal environment (fixing npm/cli#8075)...' &&
       apt-get update -qq &&
       apt-get install -y -qq curl wget git build-essential python3 python3-pip iptables dnsutils &&
       curl -fsSL https://deb.nodesource.com/setup_22.x | bash - &&
       apt-get install -y -qq nodejs &&
+      echo 'Initial versions:' &&
+      echo '  Node.js:' && node --version &&
+      echo '  npm:' && npm --version &&
+      echo '🔧 Applying fix for npm 11.x corepack bug (npm/cli#8075)...' &&
+      npm install -g npm@10.9.0 &&
+      npm cache clean --force &&
       echo '⚠️  Simulating Codex network restrictions...' &&
       echo '127.0.0.1 repo.yarnpkg.com' >> /etc/hosts &&
       echo '127.0.0.1 registry.yarnpkg.com' >> /etc/hosts &&
       echo '127.0.0.1 yarnpkg.com' >> /etc/hosts &&
       npm config set registry https://registry.npmjs.org/ &&
+      npm install -g corepack@latest &&
       npm install -g pnpm@latest 2>/dev/null || echo 'pnpm install failed (simulating network restrictions)' &&
-      corepack disable 2>/dev/null || echo 'corepack disabled (simulating Codex restrictions)' &&
-      echo '✅ Environment setup completed with Codex-like restrictions' &&
-      echo 'Node.js:' && node --version &&
-      echo 'npm:' && npm --version &&
-      echo 'pnpm:' && (pnpm --version 2>/dev/null || echo 'restricted by network policy') &&
-      echo 'Python:' && python3 --version &&
-      echo '🔬 ICE-WEBAPP Codex Universal container ready (with simulated restrictions)' &&
+      echo '✅ Environment setup completed with npm/cli#8075 fix applied' &&
+      echo 'Final versions:' &&
+      echo '  Node.js:' && node --version &&
+      echo '  npm:' && npm --version &&
+      echo '  pnpm:' && (pnpm --version 2>/dev/null || echo 'restricted by network policy') &&
+      echo '  Python:' && python3 --version &&
+      echo '🚀 ICE-WEBAPP Codex Universal container ready (npm 11.x bug fixed)' &&
       sleep infinity
       "
     
