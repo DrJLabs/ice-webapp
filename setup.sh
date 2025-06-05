@@ -144,36 +144,16 @@ setup_nodejs() {
     log "Final Node.js version: $(node --version)"
     log "NPM version: $(npm --version)"
     
-    # Install pnpm with explicit shell and environment settings
-    log "Installing pnpm for $ENVIRONMENT environment..."
-    
-    if [[ "$ENVIRONMENT" == "codex" ]]; then
-        # Codex-specific pnpm installation
-        export SHELL="/bin/bash"
-        export PNPM_HOME="$HOME/.local/share/pnpm"
-        run_command "mkdir -p \"$PNPM_HOME\"" "Create pnpm home directory"
-        
-        # Download and install pnpm manually for containers
-        run_command "curl -fsSL https://get.pnpm.io/install.sh | SHELL=/bin/bash sh -" "Install pnpm"
-        
-        # Add to PATH immediately
-        export PATH="$PNPM_HOME:$PATH"
-        
-        # Create shell profile entry
-        echo 'export PNPM_HOME="$HOME/.local/share/pnpm"' >> ~/.bashrc
-        echo 'export PATH="$PNPM_HOME:$PATH"' >> ~/.bashrc
-        
-    else
-        # Standard installation for other environments
-        run_command "curl -fsSL https://get.pnpm.io/install.sh | sh -" "Install pnpm"
-        source ~/.bashrc 2>/dev/null || export PATH="$HOME/.local/share/pnpm:$PATH"
-    fi
-    
+    # Install pnpm directly using npm for maximum compatibility
+    log "Installing pnpm via npm..."
+    run_command "npm install -g pnpm@latest" "Install pnpm globally"
+
     # Verify pnpm installation
     if ! command -v pnpm >/dev/null 2>&1; then
         error "pnpm installation failed"
         return 1
     fi
+    log "pnpm version: $(pnpm --version)"
     
     # Configure npm/pnpm for speed and reliability
     run_command "npm config set registry https://registry.npmjs.org/ --global" "Set npm registry"
