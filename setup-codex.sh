@@ -4,10 +4,35 @@
 # Optimized for ChatGPT Codex Pre-installed Environment
 # Addresses: shebang issues, network constraints, container environment
 # Based on community research and Codex environment specifications
+# Includes robust error-reporting for silent-failure environments.
 #
 
-# Minimal strict mode (avoids unbound variable issues in containers)
-set -eo pipefail
+# Enable command tracing for detailed debugging output
+set -x
+
+# Do NOT exit on error; we will collect errors and report them at the end.
+# REMOVED: set -eo pipefail
+
+# --- Robust Error-Handling Setup ---
+DEBUG_MESSAGES=()
+FAILED_COMMANDS=0
+
+# Wrapper function to execute commands and log failures
+run_command() {
+    local cmd_string="$1"
+    local description="$2"
+    
+    log "--- [START] $description ---"
+    if ! eval "$cmd_string"; then
+        local error_msg="--- [FAILED] '$description' ---"
+        warn "$error_msg"
+        DEBUG_MESSAGES+=("Task: '$description' | Command: '$cmd_string'")
+        ((FAILED_COMMANDS++))
+    else
+        log "--- [SUCCESS] '$description' ---"
+    fi
+}
+# --- End Error-Handling Setup ---
 
 # Codex environment detection and debug info
 echo "=== ICE-WEBAPP Codex Setup Script v2025.1.3 ==="
@@ -21,7 +46,12 @@ echo "=================================================="
 # Simple logging functions
 log() { echo "[LOG] $*"; }
 warn() { echo "[WARN] $*"; }
-error() { echo "[ERROR] $*"; exit 1; }
+error() {
+    local msg="[ERROR] $*"
+    warn "$msg"
+    DEBUG_MESSAGES+=("$msg")
+    ((FAILED_COMMANDS++))
+}
 success() { echo "[SUCCESS] $*"; }
 
 # Codex pre-installed package versions (Node.js 22 configurable)
@@ -41,14 +71,13 @@ setup_codex_environment() {
     export PNPM_HOME="$HOME/.local/share/pnpm"
     export PATH="$PNPM_HOME:$PATH"
     
-    # Create essential directories
-    mkdir -p ~/.npm ~/.cache ~/.config "$PNPM_HOME" || warn "Directory creation partial failure"
+    run_command "mkdir -p ~/.npm ~/.cache ~/.config \"$PNPM_HOME\"" "Create essential directories"
     
     # Clear proxy settings that cause npm warnings (community solution)
-    unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy 2>/dev/null || true
+    run_command "unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy 2>/dev/null || true" "Unset proxy variables"
     
     # Clear additional npm-related proxy environment variables
-    unset npm_config_proxy npm_config_https_proxy npm_config_http_proxy 2>/dev/null || true
+    run_command "unset npm_config_proxy npm_config_https_proxy npm_config_http_proxy 2>/dev/null || true" "Unset npm proxy variables"
     
     success "Codex environment configured"
 }
@@ -103,30 +132,21 @@ verify_codex_packages() {
 configure_npm() {
     log "Configuring npm for Codex environment..."
     
-    # Remove proxy configurations that cause warnings
-    npm config delete proxy --global 2>/dev/null || true
-    npm config delete https-proxy --global 2>/dev/null || true
-    npm config delete http-proxy --global 2>/dev/null || true
-    
-    # Clear npm cache to prevent corruption issues
-    npm cache clean --force 2>/dev/null || true
-    
-    # Set optimal configurations with fallbacks for restricted environments
-    npm config set registry https://registry.npmjs.org/ --global 2>/dev/null || echo "npm registry config failed (network restrictions)"
-    npm config set fetch-retry-maxtimeout 60000 --global 2>/dev/null || echo "npm timeout config failed"  
-    npm config set fetch-retries 3 --global 2>/dev/null || echo "npm retries config failed"
-    npm config set fund false --global 2>/dev/null || true
-    npm config set audit false --global 2>/dev/null || true
+    run_command "npm config delete proxy --global" "Delete npm proxy config"
+    run_command "npm config delete https-proxy --global" "Delete npm https-proxy config"
+    run_command "npm config delete http-proxy --global" "Delete npm http-proxy config"
+    run_command "npm cache clean --force" "Clear npm cache"
+    run_command "npm config set registry https://registry.npmjs.org/ --global" "Set npm registry"
+    run_command "npm config set fetch-retry-maxtimeout 60000 --global" "Set npm fetch timeout"
+    run_command "npm config set fetch-retries 3 --global" "Set npm fetch retries"
+    run_command "npm config set fund false --global" "Disable npm fund"
+    run_command "npm config set audit false --global" "Disable npm audit"
     
     # CRITICAL FIX: npm 11.x corepack bug (npm/cli#8075)
     local npm_version=$(npm --version 2>/dev/null || echo "unknown")
     if [[ "$npm_version" =~ ^11\. ]]; then
         log "Detected npm $npm_version - applying corepack fix for npm/cli#8075..."
-        if npm install -g corepack@latest 2>/dev/null; then
-            log "✅ Updated corepack to fix npm 11.x compatibility issue"
-        else
-            warn "⚠️  Could not update corepack, will use npm fallbacks"
-        fi
+        run_command "npm install -g corepack@latest" "Update corepack for npm 11.x"
     fi
     
     success "npm configured with network restriction handling and corepack fix"
@@ -160,6 +180,8 @@ install_pnpm() {
         pnpm_installed=true
     else
         warn "npm install failed, trying alternative methods..."
+        DEBUG_MESSAGES+=("Task: 'Install pnpm via npm' | Command: 'npm install -g pnpm@latest'")
+        ((FAILED_COMMANDS++))
     fi
     
     # Only try corepack if npm method failed AND it's not npm 11.x (due to bug npm/cli#8075)
@@ -174,6 +196,8 @@ install_pnpm() {
                 pnpm_installed=true
             else
                 warn "corepack failed (common in restricted environments)"
+                DEBUG_MESSAGES+=("Task: 'Enable pnpm via corepack' | Command: 'corepack enable && corepack prepare pnpm@latest --activate'")
+                ((FAILED_COMMANDS++))
             fi
         fi
     fi
@@ -417,7 +441,7 @@ install_dependencies() {
     log "Installing dependencies (network access available during setup)..."
     
     # Clear any lingering npm config issues
-    npm config delete http-proxy --global 2>/dev/null || true
+    run_command "npm config delete http-proxy --global" "Delete http-proxy before install"
     
     local install_success=false
     
@@ -428,6 +452,8 @@ install_dependencies() {
             install_success=true
         else
             warn "pnpm install failed - trying npm"
+            DEBUG_MESSAGES+=("Task: 'Install dependencies with pnpm' | Command: 'pnpm install --no-frozen-lockfile'")
+            ((FAILED_COMMANDS++))
         fi
     fi
     
@@ -438,6 +464,8 @@ install_dependencies() {
             install_success=true
         else
             warn "npm install failed - but setup can continue"
+            DEBUG_MESSAGES+=("Task: 'Install dependencies with npm' | Command: 'npm install --no-package-lock'")
+            ((FAILED_COMMANDS++))
             log "You can manually run 'npm install' after setup completes"
         fi
     fi
@@ -467,17 +495,31 @@ verify_installation() {
     if [[ -d "node_modules" ]]; then
         echo "  ✓ Dependencies: Installed"
     else
-        echo "  ⚠ Dependencies: Not installed (retry: npm install)"
+        echo "  ⚠ Dependencies: Not installed (check debug report)"
     fi
     
     success "Installation verification complete"
 }
 
+# Final report function
+print_debug_report() {
+    echo
+    echo "=================================================="
+    echo "=== 📜 SCRIPT EXECUTION DEBUG REPORT 📜 ==="
+    echo "=================================================="
+    if [ "$FAILED_COMMANDS" -eq 0 ]; then
+        echo "✅ All setup commands appeared to execute successfully."
+        echo "If issues still persist, check the detailed trace above for subtle errors."
+    else
+        echo "❌ Found $FAILED_COMMANDS command(s) that failed with a non-zero exit code:"
+        printf " • %s\\n" "${DEBUG_MESSAGES[@]}"
+    fi
+    echo "=================================================="
+    echo
+}
+
 # Main execution function
 main() {
-    # Trap for better error reporting
-    trap 'error "Setup failed at line $LINENO - see CODEX_TROUBLESHOOTING.md"' ERR
-    
     log "Starting ICE-WEBAPP Codex setup..."
     
     # Execute setup phases
@@ -492,31 +534,32 @@ main() {
     install_dependencies
     verify_installation
     
-    echo
-    success "🎉 ICE-WEBAPP setup completed successfully!"
-    echo
-    log "Next steps in ChatGPT Codex:"
-    echo "  1. Run: npm run dev (or pnpm run dev)"
-    echo "  2. Open: http://localhost:3000"
-    echo "  3. Start building your AI-optimized app!"
-    echo
-    log "Remember: Network access is now disabled outside this setup script"
-    log "All dependencies were installed during the setup phase"
-    echo
-    log "Documentation:"
-    echo "  - Check package.json for available scripts"
-    echo "  - Use 'npm run codex:verify' to check environment"
-    echo "  - All tools are configured for Node.js 22 and bleeding-edge tech"
+    # Always print the debug report as the last step
+    print_debug_report
+    
+    if [ "$FAILED_COMMANDS" -eq 0 ]; then
+        echo
+        success "🎉 ICE-WEBAPP setup completed successfully!"
+        echo
+        log "Next steps in ChatGPT Codex:"
+        echo "  1. Run: npm run dev (or pnpm run dev)"
+        echo "  2. Open: http://localhost:3000"
+        echo "  3. Start building your AI-optimized app!"
+        echo
+        log "Remember: Network access is now disabled outside this setup script"
+        log "All dependencies were installed during the setup phase"
+    else
+        echo
+        warn "🚨 ICE-WEBAPP setup completed with errors. See the debug report above. 🚨"
+        warn "The script continued to run to provide this report."
+        warn "Please analyze the failed commands to resolve the issue."
+    fi
 }
 
 # Execute main function (with error handling)
 main "$@" || {
-    echo
-    error "Setup failed - check the error messages above"
-    echo "Common solutions:"
-    echo "  1. Ensure Node.js is set to v22 in Codex environment settings"
-    echo "  2. Try running the script again (network issues are common)"
-    echo "  3. Check that all required packages are selected in Codex setup"
-    echo "  4. For persistent issues, contact Codex support"
+    # This block will likely not be reached, but as a fallback:
+    print_debug_report
+    error "Setup failed unexpectedly in the main execution block."
     exit 1
 } 
