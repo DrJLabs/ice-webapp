@@ -93,6 +93,44 @@ export PATH="~/.local/share/pnpm:$PATH"
 - Uses `${USER:-$(whoami)}` to provide fallback values
 - Safe environment variable checking throughout the script
 
+### 6. **Dependency Installation Failures**
+```
+ERR_PNPM_NO_MATCHING_VERSION  No matching version found for @next/font@^15.1.3
+npm error `network-timeout` is not a valid npm option
+```
+
+**Cause**: 
+- `@next/font` was removed in Next.js 13.2+ (replaced with `next/font`)
+- Invalid npm configuration options
+
+**Fix**:
+```bash
+# Remove outdated dependencies from package.json
+# Use next/font instead: import { Inter } from 'next/font/google'
+
+# Use correct npm timeout setting
+npm config set timeout 300000 --global  # NOT network-timeout
+
+# Clear any lingering proxy configs
+npm config delete http-proxy --global
+unset npm_config_proxy npm_config_https_proxy
+```
+
+### 7. **File Creation vs Directory Error**
+```
+src/app/layout.tsx: Is a directory
+```
+
+**Cause**: Using `mkdir -p src/app/{file1,file2}` creates directories instead of files
+
+**Fix**: Create directories and files separately:
+```bash
+mkdir -p src/app
+cat > src/app/layout.tsx << 'EOF'
+// file content
+EOF
+```
+
 ## 🚀 Codex-Optimized Workflow
 
 ### Recommended Codex Setup Process:
