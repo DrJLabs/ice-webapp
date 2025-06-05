@@ -1,0 +1,172 @@
+{
+  "environments": {
+    "codex": {
+      "description": "ChatGPT Codex pre-installed environment",
+      "runtime": {
+        "node": "20",
+        "python": "3.12",
+        "bun": "1.2.14",
+        "java": "21",
+        "go": "1.23.8",
+        "rust": "1.87.0",
+        "ruby": "3.4.4",
+        "swift": "6.1"
+      },
+      "dependencies": {
+        "next": "^15.0.3",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "typescript": "^5.6.3",
+        "eslint": "^8.57.1",
+        "tailwindcss": "^3.4.14",
+        "vitest": "^2.0.5",
+        "playwright": "^1.47.2"
+      },
+      "devDependencies": {
+        "@types/node": "^20.14.0",
+        "@types/react": "^18.3.0",
+        "@types/react-dom": "^18.3.0",
+        "eslint-config-next": "^15.0.3",
+        "@typescript-eslint/eslint-plugin": "^7.15.0",
+        "@typescript-eslint/parser": "^7.15.0"
+      },
+      "features": {
+        "sudo_required": false,
+        "pre_installed_packages": true,
+        "container_optimized": true,
+        "proxy_handling": true
+      }
+    },
+    "bleeding_edge": {
+      "description": "Latest bleeding-edge versions for local/cursor environments",
+      "runtime": {
+        "node": "22.12.0",
+        "python": "3.12"
+      },
+      "dependencies": {
+        "next": "^15.1.3",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "typescript": "^5.7.2",
+        "eslint": "^9.18.0",
+        "tailwindcss": "^3.4.16",
+        "vitest": "^2.1.6",
+        "playwright": "^1.49.0"
+      },
+      "devDependencies": {
+        "@types/node": "^22.10.2",
+        "@types/react": "^19.0.1",
+        "@types/react-dom": "^19.0.1",
+        "eslint-config-next": "^15.1.3",
+        "@typescript-eslint/eslint-plugin": "^8.18.0",
+        "@typescript-eslint/parser": "^8.18.0"
+      },
+      "features": {
+        "sudo_required": true,
+        "pre_installed_packages": false,
+        "container_optimized": false,
+        "proxy_handling": false
+      }
+    }
+  },
+  "shared_dependencies": {
+    "production": {
+      "framer-motion": "^11.0.0",
+      "lucide-react": "^0.400.0",
+      "@radix-ui/react-slot": "^1.1.0",
+      "@radix-ui/react-toast": "^1.2.0",
+      "@radix-ui/react-dialog": "^1.1.0",
+      "class-variance-authority": "^0.7.0",
+      "clsx": "^2.1.0",
+      "tailwind-merge": "^2.3.0",
+      "zustand": "^4.5.0",
+      "@tanstack/react-query": "^5.40.0",
+      "react-hook-form": "^7.50.0",
+      "@hookform/resolvers": "^3.6.0",
+      "zod": "^3.23.0"
+    },
+    "development": {
+      "prettier": "^3.3.0",
+      "prettier-plugin-tailwindcss": "^0.6.0",
+      "postcss": "^8.4.38",
+      "autoprefixer": "^10.4.19",
+      "@vitejs/plugin-react": "^4.3.0",
+      "@testing-library/react": "^16.0.0",
+      "@testing-library/jest-dom": "^6.4.0",
+      "@testing-library/user-event": "^14.5.0",
+      "cross-env": "^7.0.3"
+    }
+  },
+  "compatibility_matrix": {
+    "node_20": {
+      "next": "<=15.0.x",
+      "react": "<=18.3.x",
+      "typescript": "<=5.6.x",
+      "eslint": "<=8.57.x"
+    },
+    "node_22": {
+      "next": ">=15.1.x",
+      "react": ">=19.0.x",
+      "typescript": ">=5.7.x",
+      "eslint": ">=9.18.x"
+    }
+  },
+  "environment_detection": {
+    "codex_indicators": [
+      "USER=root",
+      "SUDO_USER unset",
+      "/.dockerenv exists",
+      "CONTAINER env var",
+      "CODEX_ENVIRONMENT env var",
+      "OPENAI_CODEX env var"
+    ],
+    "cursor_indicators": [
+      "CURSOR_SESSION env var"
+    ],
+    "ci_indicators": [
+      "CI env var",
+      "GITHUB_ACTIONS env var"
+    ]
+  },
+  "setup_strategies": {
+    "codex": {
+      "script": "setup-codex.sh",
+      "package_manager": "npm -> pnpm",
+      "node_installation": "use_preinstalled",
+      "sudo_usage": false,
+      "proxy_cleanup": true
+    },
+    "bleeding_edge": {
+      "script": "setup.sh",
+      "package_manager": "install_pnpm",
+      "node_installation": "install_latest",
+      "sudo_usage": true,
+      "proxy_cleanup": false
+    }
+  },
+  "quality_gates": {
+    "typescript": {
+      "command": "pnpm run type-check",
+      "required": true
+    },
+    "linting": {
+      "command": "pnpm run lint",
+      "required": true
+    },
+    "testing": {
+      "command": "pnpm run test",
+      "required": true
+    },
+    "security": {
+      "command": "./tools/codacy-runtime.sh",
+      "required": true
+    }
+  },
+  "metadata": {
+    "version": "2025.1.1",
+    "last_updated": "2025-01-03",
+    "codex_optimized": true,
+    "bleeding_edge_support": true,
+    "absolute_dependency_cohesion": true
+  }
+} 

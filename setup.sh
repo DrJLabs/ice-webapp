@@ -20,19 +20,24 @@ readonly NC='\033[0m' # No Color
 # Configuration
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly WORKSPACE_DIR="$PWD"
-readonly NODE_VERSION="22.12.0"
+readonly NODE_VERSION="22.12.0"  # For non-Codex environments
+readonly NODE_VERSION_CODEX="20"  # Codex pre-installed version
 readonly PYTHON_VERSION="3.12"
 readonly TOOLS_DIR="$WORKSPACE_DIR/tools"
 
-# Dependency versions (bleeding edge)
+# Dependency versions (bleeding edge for local/cursor, stable for Codex)
 readonly NEXT_VERSION="15.1.3"
+readonly NEXT_VERSION_CODEX="15.0.3"
 readonly REACT_VERSION="19.0.0"
+readonly REACT_VERSION_CODEX="18.3.1"
 readonly TYPESCRIPT_VERSION="5.7.2"
+readonly TYPESCRIPT_VERSION_CODEX="5.6.3"
 readonly TAILWIND_VERSION="3.4.16"
 readonly VITE_VERSION="6.0.1"
 readonly VITEST_VERSION="2.1.6"
 readonly PLAYWRIGHT_VERSION="1.49.0"
 readonly ESLINT_VERSION="9.18.0"
+readonly ESLINT_VERSION_CODEX="8.57.1"
 
 log() {
     echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $*${NC}" >&2
@@ -55,9 +60,15 @@ success() {
     echo -e "${GREEN}[SUCCESS] $*${NC}" >&2
 }
 
-# Detect environment type
+# Detect environment type with improved Codex detection
 detect_environment() {
-    if [[ -n "${CODEX_ENVIRONMENT:-}" || -n "${GITHUB_CODESPACE_NAME:-}" ]]; then
+    # Check for Codex/container environments
+    if [[ -n "${CODEX_ENVIRONMENT:-}" ]] || \
+       [[ -n "${GITHUB_CODESPACE_NAME:-}" ]] || \
+       [[ -n "${OPENAI_CODEX:-}" ]] || \
+       [[ -f "/.dockerenv" ]] || \
+       [[ "$USER" == "root" && -z "${SUDO_USER:-}" ]] || \
+       [[ -n "${CONTAINER:-}" ]]; then
         echo "codex"
     elif [[ -n "${CURSOR_SESSION:-}" ]]; then
         echo "cursor"
@@ -87,25 +98,91 @@ setup_system_dependencies() {
 setup_nodejs() {
     log "Setting up Node.js ${NODE_VERSION}..."
     
-    # Install Node.js via NodeSource
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    # Set shell environment for Codex/container compatibility
+    export SHELL="${SHELL:-/bin/bash}"
+    
+    # Clear npm proxy warnings for clean environments
+    unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy
+    
+    # Install Node.js via NodeSource with retry mechanism
+    local retry_count=0
+    local max_retries=3
+    
+    while [ $retry_count -lt $max_retries ]; do
+        if curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -; then
+            break
+        fi
+        retry_count=$((retry_count + 1))
+        log "Retry $retry_count/$max_retries for NodeSource setup..."
+        sleep 2
+    done
+    
+    # Force install specific Node.js version
     sudo apt-get install -y nodejs
     
-    # Verify installation
-    node --version
-    npm --version
+    # Verify Node.js version and force if needed
+    current_version=$(node --version)
+    log "Current Node.js version: $current_version"
     
-    # Install pnpm (fastest package manager)
-    curl -fsSL https://get.pnpm.io/install.sh | sh -
-    source ~/.bashrc || export PATH="$HOME/.local/share/pnpm:$PATH"
+    if [[ ! "$current_version" =~ ^v22\. ]]; then
+        warn "Node.js version mismatch, forcing v22.x installation..."
+        # Remove existing Node.js
+        sudo apt-get remove -y nodejs npm
+        # Clean install
+        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    fi
     
-    # Enable pnpm
-    pnpm --version
+    # Verify final installation
+    log "Final Node.js version: $(node --version)"
+    log "NPM version: $(npm --version)"
     
-    # Configure npm/pnpm for speed
-    npm config set registry https://registry.npmjs.org/
-    pnpm config set registry https://registry.npmjs.org/
-    pnpm config set store-dir ~/.pnpm-store
+    # Install pnpm with explicit shell and environment settings
+    log "Installing pnpm for $ENVIRONMENT environment..."
+    
+    if [[ "$ENVIRONMENT" == "codex" ]]; then
+        # Codex-specific pnpm installation
+        export SHELL="/bin/bash"
+        export PNPM_HOME="$HOME/.local/share/pnpm"
+        mkdir -p "$PNPM_HOME"
+        
+        # Download and install pnpm manually for containers
+        curl -fsSL https://get.pnpm.io/install.sh | SHELL=/bin/bash sh -
+        
+        # Add to PATH immediately
+        export PATH="$PNPM_HOME:$PATH"
+        
+        # Create shell profile entry
+        echo 'export PNPM_HOME="$HOME/.local/share/pnpm"' >> ~/.bashrc
+        echo 'export PATH="$PNPM_HOME:$PATH"' >> ~/.bashrc
+        
+    else
+        # Standard installation for other environments
+        curl -fsSL https://get.pnpm.io/install.sh | sh -
+        source ~/.bashrc 2>/dev/null || export PATH="$HOME/.local/share/pnpm:$PATH"
+    fi
+    
+    # Verify pnpm installation
+    if command -v pnpm >/dev/null 2>&1; then
+        log "pnpm version: $(pnpm --version)"
+    else
+        error "pnpm installation failed"
+        return 1
+    fi
+    
+    # Configure npm/pnpm for speed and reliability
+    npm config set registry https://registry.npmjs.org/ --global
+    npm config delete proxy --global 2>/dev/null || true
+    npm config delete https-proxy --global 2>/dev/null || true
+    
+    if command -v pnpm >/dev/null 2>&1; then
+        pnpm config set registry https://registry.npmjs.org/
+        pnpm config set store-dir ~/.pnpm-store
+        pnpm config set network-timeout 300000
+        pnpm config set fetch-retries 5
+    fi
+    
+    success "Node.js ${NODE_VERSION} and pnpm setup completed"
 }
 
 # Python setup for AI/ML tools
@@ -551,13 +628,71 @@ EOF
     success "Configuration files created"
 }
 
+# Codex environment optimizations
+optimize_for_codex() {
+    log "Applying Codex environment optimizations..."
+    
+    # Check if specialized Codex script exists and recommend it
+    if [[ -f "$SCRIPT_DIR/setup-codex.sh" ]]; then
+        info "🚨 RECOMMENDATION: Use the specialized Codex setup script for optimal results:"
+        info "   bash setup-codex.sh"
+        info ""
+        info "The specialized script leverages pre-installed packages and handles:"
+        info "  - Node.js 20 (pre-installed)"
+        info "  - No sudo requirements (runs as root)"
+        info "  - Optimized dependency versions"
+        info "  - Container-specific configurations"
+        info ""
+        
+        read -p "Continue with general setup (y) or exit to use Codex script (n)? [y/N]: " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            info "Exiting. Run: bash setup-codex.sh"
+            exit 0
+        fi
+    fi
+    
+    # Set essential environment variables for container compatibility
+    export SHELL="/bin/bash"
+    export DEBIAN_FRONTEND=noninteractive
+    export PNPM_HOME="$HOME/.local/share/pnpm"
+    export PATH="$PNPM_HOME:$PATH"
+    
+    # Create necessary directories
+    mkdir -p "$PNPM_HOME" ~/.npm ~/.cache
+    
+    # Clear any proxy configuration that might interfere
+    unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
+    
+    # Optimize apt for containers (check if running as root)
+    if [[ "$USER" == "root" ]]; then
+        # No sudo needed - already root in Codex
+        echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries 2>/dev/null || true
+        echo 'Acquire::http::Timeout "60";' > /etc/apt/apt.conf.d/80-timeout 2>/dev/null || true
+        apt-get update -qq 2>/dev/null || warn "apt-get update failed (expected in some Codex environments)"
+    else
+        # Use sudo for non-root environments
+        echo 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-retries >/dev/null
+        echo 'Acquire::http::Timeout "60";' | sudo tee /etc/apt/apt.conf.d/80-timeout >/dev/null
+        sudo apt-get update -qq 2>/dev/null || warn "apt-get update failed"
+    fi
+    
+    success "Codex optimizations applied"
+}
+
 # Main execution
 main() {
     local env_type
     env_type="$(detect_environment)"
+    export ENVIRONMENT="$env_type"
     
     info "Detected environment: $env_type"
     info "Starting ICE-WEBAPP setup..."
+    
+    # Apply environment-specific optimizations
+    if [[ "$env_type" == "codex" ]]; then
+        optimize_for_codex
+    fi
     
     # Core setup
     setup_system_dependencies

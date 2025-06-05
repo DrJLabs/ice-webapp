@@ -8,19 +8,46 @@ This guide provides comprehensive instructions for using ICE-WEBAPP with OpenAI'
 
 ## 🎯 Quick Setup for Codex
 
-### 1. Environment Configuration
+### 1. Codex-Optimized Setup (Recommended)
+
+**Use the specialized Codex setup script that leverages pre-installed packages:**
+
+```bash
+# Optimized for Codex pre-installed packages (Node.js 20, Python 3.12, etc.)
+curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup-codex.sh | bash
+```
+
+**Key advantages of the Codex-optimized script:**
+- ✅ Uses pre-installed Node.js 20 (no version conflicts)
+- ✅ No sudo requirements (runs as root in Codex)
+- ✅ Optimized dependency versions for Node.js 20
+- ✅ Container-specific configurations
+- ✅ Faster setup (leverages pre-installed tools)
+
+**Alternative: Fix common issues then use main setup:**
+```bash
+# Fix shell detection, Node.js version, and npm proxy issues
+curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/tools/codex-setup.sh | bash
+
+# Then run main setup
+curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup.sh | bash
+```
+
+**If you encounter setup errors**, see the [Codex Troubleshooting Guide](CODEX_TROUBLESHOOTING.md) for specific solutions.
+
+### 2. Legacy Setup (If Codex Issues Persist)
 
 **Copy this setup script to your Codex environment:**
 
 ```bash
 #!/usr/bin/env bash
-# ICE-WEBAPP Codex Environment Setup
+# ICE-WEBAPP Codex Environment Setup (Fallback)
 curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup.sh | bash
 ```
 
 **Or use the complete setup.sh contents** from the ICE-WEBAPP repository for offline-capable environments.
 
-### 2. Environment Variables (Optional)
+### 3. Environment Variables (Optional)
 
 Add these to your Codex secrets:
 
@@ -34,7 +61,7 @@ NODE_ENV=development
 NEXT_PUBLIC_APP_NAME="My Codex WebApp"
 ```
 
-### 3. Verify Setup
+### 4. Verify Setup
 
 Your Codex environment will automatically configure:
 - ✅ Node.js 22.12.0

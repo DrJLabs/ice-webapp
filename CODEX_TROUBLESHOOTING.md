@@ -1,0 +1,195 @@
+# 🚨 Codex Environment Troubleshooting Guide
+
+Quick solutions for common ChatGPT Codex container environment issues.
+
+## 🔧 Quick Fix for Codex Setup Errors
+
+If you encounter the following errors in Codex:
+
+```bash
+ERR_PNPM_UNKNOWN_SHELL  Could not infer shell type.
+npm warn Unknown env config "http-proxy"
+Node.js version mismatch (v20.x instead of v22.x)
+```
+
+**Best Solution**: Use the Codex-optimized setup script that leverages pre-installed packages:
+
+```bash
+# Recommended: Use specialized Codex script (leverages Node.js 20, no sudo, optimized deps)
+curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup-codex.sh | bash
+```
+
+**Alternative Solution**: Fix environment issues then run main setup:
+
+```bash
+# Fix Codex environment issues first
+curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/tools/codex-setup.sh | bash
+
+# Then run main setup
+bash setup.sh
+```
+
+## 📋 Common Codex Issues & Solutions
+
+### 1. **Shell Detection Error**
+```
+ERR_PNPM_UNKNOWN_SHELL Could not infer shell type
+```
+
+**Cause**: Codex containers don't set SHELL environment variable properly.
+
+**Fix**:
+```bash
+export SHELL="/bin/bash"
+curl -fsSL https://get.pnpm.io/install.sh | SHELL=/bin/bash sh -
+```
+
+### 2. **npm Proxy Warnings**
+```
+npm warn Unknown env config "http-proxy"
+```
+
+**Cause**: Container environments inherit proxy settings.
+
+**Fix**:
+```bash
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy
+npm config delete proxy --global 2>/dev/null || true
+npm config delete https-proxy --global 2>/dev/null || true
+```
+
+### 3. **Node.js Version Mismatch**
+```
+Expected: v22.x, Got: v20.x
+```
+
+**Cause**: Container base image has older Node.js version.
+
+**Fix**:
+```bash
+sudo apt-get remove -y nodejs npm
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+### 4. **pnpm Installation Fails**
+```
+Installation hangs or fails silently
+```
+
+**Fix**: Use manual installation:
+```bash
+mkdir -p ~/.local/share/pnpm
+curl -fsSL https://github.com/pnpm/pnpm/releases/download/v9.15.0/pnpm-linux-x64 -o ~/.local/share/pnpm/pnpm
+chmod +x ~/.local/share/pnpm/pnpm
+export PATH="~/.local/share/pnpm:$PATH"
+```
+
+## 🚀 Codex-Optimized Workflow
+
+### Recommended Codex Setup Process:
+
+1. **Pre-Setup (Codex Fix)**:
+```bash
+bash tools/codex-setup.sh --quick
+```
+
+2. **Main Setup**:
+```bash
+bash setup.sh
+```
+
+3. **Verification**:
+```bash
+node --version  # Should show v22.x
+pnpm --version  # Should work without errors
+pnpm run type-check  # Verify TypeScript
+```
+
+### Alternative: One-Line Codex Setup
+```bash
+curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/tools/codex-setup.sh | bash && bash setup.sh
+```
+
+## 🔍 Environment Detection
+
+The setup automatically detects Codex environments by checking:
+- `CODEX_ENVIRONMENT` variable
+- `GITHUB_CODESPACE_NAME` variable 
+- `OPENAI_CODEX` variable
+- Docker environment (`/.dockerenv`)
+- Root user without sudo context
+- `CONTAINER` environment variable
+
+## 🛠️ Manual Codex Environment Setup
+
+If automatic detection fails:
+
+```bash
+export CODEX_ENVIRONMENT=true
+export SHELL="/bin/bash"
+export DEBIAN_FRONTEND=noninteractive
+bash setup.sh
+```
+
+## ⚡ Quick Development Start
+
+After successful setup in Codex:
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start development
+pnpm run dev
+
+# Run in background (for Codex)
+pnpm run dev &
+
+# Quality checks
+pnpm run lint && pnpm run type-check
+```
+
+## 🔧 Container-Specific Configurations
+
+### APT Optimizations
+```bash
+echo 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-retries
+echo 'Acquire::http::Timeout "60";' | sudo tee /etc/apt/apt.conf.d/80-timeout
+```
+
+### pnpm Configuration for Containers
+```bash
+pnpm config set network-timeout 300000
+pnpm config set fetch-retries 5
+pnpm config set fetch-retry-factor 2
+pnpm config set fetch-retry-mintimeout 10000
+```
+
+## 📞 Support
+
+If issues persist:
+
+1. **Check logs**: All setup scripts provide detailed logging
+2. **Verify environment**: Run `bash tools/codex-setup.sh --help`
+3. **Manual verification**:
+   ```bash
+   echo "Node.js: $(node --version)"
+   echo "npm: $(npm --version)" 
+   echo "pnpm: $(pnpm --version)"
+   echo "Shell: $SHELL"
+   echo "Environment: $CODEX_ENVIRONMENT"
+   ```
+
+## 🎯 Success Indicators
+
+Setup is successful when:
+- ✅ Node.js version shows `v22.x`
+- ✅ pnpm installs without shell errors
+- ✅ No npm proxy warnings
+- ✅ `pnpm install` completes successfully
+- ✅ `pnpm run dev` starts development server
+
+---
+
+**This troubleshooting guide specifically addresses ChatGPT Codex container environment constraints and provides bleeding-edge solutions for optimal development velocity.** 

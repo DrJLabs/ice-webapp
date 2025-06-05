@@ -43,18 +43,24 @@ A comprehensive starter scaffold optimized for AI-generated web applications usi
 
 ## 🚀 Quick Start
 
-### For ChatGPT Codex
+### For ChatGPT Codex (Recommended)
 
-**Method 1: Bootstrap New Project**
+**Method 1: Codex-Optimized Setup** ⭐
+```bash
+# Leverages pre-installed packages (Node.js 20, Python 3.12, etc.)
+curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup-codex.sh | bash
+```
+
+**Method 2: Bootstrap New Project**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/tools/ice-bootstrap.sh | bash -s my-project-name
 ```
 
-**Method 2: Copy Setup Script**
-1. Copy the complete contents of [`setup.sh`](setup.sh) to your Codex environment setup field
-2. Run your task - environment auto-configures with bleeding-edge tools
+**Method 3: Copy Setup Script**
+1. Copy the complete contents of [`setup-codex.sh`](setup-codex.sh) to your Codex environment setup field
+2. Run your task - environment auto-configures with pre-installed tools
 
-**Method 3: Add to Existing Project**
+**Method 4: Add to Existing Project**
 ```bash
 cd existing-project
 curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/tools/ice-bootstrap.sh | bash -s --update
@@ -109,12 +115,12 @@ ice-webapp/
 
 The ICE-WEBAPP maintains **absolute dependency management cohesion** across:
 
-| Environment | Status | Node.js | Package Manager | Auto-Setup |
-|-------------|--------|---------|----------------|------------|
-| **Cursor (Local)** | ✅ | 22.12.0 | pnpm 9 | Yes |
-| **ChatGPT Codex** | ✅ | 22.12.0 | pnpm 9 | Yes |
-| **CI/CD Runner** | ✅ | 22.12.0 | pnpm 9 | Yes |
-| **Docker** | ✅ | 22.12.0 | pnpm 9 | Yes |
+| Environment | Status | Node.js | Package Manager | Auto-Setup | Script |
+|-------------|--------|---------|----------------|------------|--------|
+| **ChatGPT Codex** | ✅ | 20 (pre-installed) | npm → pnpm | Yes | `setup-codex.sh` |
+| **Cursor (Local)** | ✅ | 22.12.0 | pnpm 9 | Yes | `setup.sh` |
+| **CI/CD Runner** | ✅ | 22.12.0 | pnpm 9 | Yes | `setup.sh` |
+| **Docker** | ✅ | 22.12.0 | pnpm 9 | Yes | `setup.sh` |
 
 ### Dependency Synchronization
 
