@@ -1,0 +1,105 @@
+# .github/workflows/codacy.yml
+name: codacy
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+jobs:
+  codacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: 'pnpm'
+
+      # Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      # Install dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Type checking
+      - name: Type check
+        run: pnpm run type-check
+
+      # Linting
+      - name: Lint
+        run: pnpm run lint
+
+      # Tests
+      - name: Run tests
+        run: pnpm run test --coverage
+
+      # Runtime helper installs CLI + sets flag
+      - name: Prepare Codacy
+        run: ./tools/codacy-runtime.sh
+        env:
+          CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+      # Run analysis – upload SARIF back to Codacy
+      - name: Codacy Static Analysis
+        uses: codacy/codacy-analysis-cli-action@v5
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          upload: true
+          max-allowed-errors: 0
+
+      # Upload test coverage
+      - name: Upload coverage
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage/lcov.info
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: 'pnpm'
+
+      # Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      # Security audit
+      - name: Security audit
+        run: pnpm audit --audit-level moderate
+
+      # Dependency vulnerabilities check with Trivy
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      # Upload Trivy results to GitHub Security tab
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif' 

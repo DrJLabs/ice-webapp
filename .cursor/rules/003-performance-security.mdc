@@ -1,0 +1,513 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: "Performance optimization and security standards for ICE-WEBAPP with automated quality gate integration"
+globs: "src/**/*.{ts,tsx}, app/**/*.{ts,tsx}, api/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Performance and Security Standards for ICE-WEBAPP
+
+## Performance Optimization Requirements
+
+### Core Web Vitals Compliance
+Every page and component must meet Core Web Vitals standards:
+
+- **LCP (Largest Contentful Paint)**: < 2.5 seconds
+- **FID (First Input Delay)**: < 100 milliseconds  
+- **CLS (Cumulative Layout Shift)**: < 0.1
+- **FCP (First Contentful Paint)**: < 1.8 seconds
+- **TTI (Time to Interactive)**: < 3.8 seconds
+
+```typescript
+// Performance monitoring integration
+import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals'
+
+export function reportWebVitals(metric: any) {
+  // Track performance metrics
+  if (process.env.NODE_ENV === 'production') {
+    // Send to analytics service
+    analytics.track('web-vital', {
+      name: metric.name,
+      value: metric.value,
+      id: metric.id,
+    })
+  }
+}
+
+// Usage in app/layout.tsx
+export default function RootLayout() {
+  useEffect(() => {
+    getCLS(reportWebVitals)
+    getFID(reportWebVitals)
+    getFCP(reportWebVitals)
+    getLCP(reportWebVitals)
+    getTTFB(reportWebVitals)
+  }, [])
+}
+```
+
+### Bundle Size Optimization
+- **Initial bundle size**: < 244KB (compressed)
+- **Per-route chunks**: < 128KB (compressed)
+- **Dynamic imports**: Required for components > 50KB
+- **Tree shaking**: Eliminate unused code
+- **Code splitting**: Implement route-based splitting
+
+```typescript
+// Bundle optimization patterns
+
+// ✅ Dynamic imports for large components
+const HeavyChart = lazy(() => import('@/components/charts/HeavyChart'))
+const AdminPanel = lazy(() => import('@/components/admin/AdminPanel'))
+
+// ✅ Selective imports from libraries
+import { debounce } from 'lodash-es/debounce'
+import { format } from 'date-fns/format'
+
+// ❌ Avoid full library imports
+// import _ from 'lodash'
+// import * as dateFns from 'date-fns'
+
+// ✅ Bundle analysis configuration
+// next.config.js
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
+module.exports = withBundleAnalyzer({
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons']
+  }
+})
+```
+
+### React Performance Patterns
+```typescript
+// Performance optimization checklist
+
+// ✅ React.memo for stable components
+const ProductCard = React.memo(({ product }: { product: Product }) => {
+  return <div>{product.name}</div>
+}, (prevProps, nextProps) => {
+  // Custom comparison for complex objects
+  return prevProps.product.id === nextProps.product.id &&
+         prevProps.product.updatedAt === nextProps.product.updatedAt
+})
+
+// ✅ useCallback for event handlers
+const ProductList = ({ products }: { products: Product[] }) => {
+  const handleProductClick = useCallback((productId: string) => {
+    router.push(`/products/${productId}`)
+  }, [router])
+
+  const handleProductFavorite = useCallback(async (productId: string) => {
+    await toggleFavorite(productId)
+    // Optimistic UI update
+  }, [])
+
+  return (
+    <div>
+      {products.map(product => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          onClick={() => handleProductClick(product.id)}
+          onFavorite={() => handleProductFavorite(product.id)}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ✅ useMemo for expensive calculations
+const ExpensiveAnalytics = ({ data }: { data: AnalyticsData[] }) => {
+  const processedMetrics = useMemo(() => {
+    return data.reduce((acc, item) => {
+      // Expensive calculation
+      return performComplexAnalysis(acc, item)
+    }, {})
+  }, [data])
+
+  return <AnalyticsChart data={processedMetrics} />
+}
+
+// ✅ Virtualization for large lists
+import { FixedSizeList as List } from 'react-window'
+
+const VirtualizedProductList = ({ products }: { products: Product[] }) => {
+  const Row = ({ index, style }: any) => (
+    <div style={style}>
+      <ProductCard product={products[index]} />
+    </div>
+  )
+
+  return (
+    <List
+      height={600}
+      itemCount={products.length}
+      itemSize={120}
+      width="100%"
+    >
+      {Row}
+    </List>
+  )
+}
+```
+
+## Security Implementation Standards
+
+### Input Validation and Sanitization
+All user inputs must be validated using Zod schemas and sanitized:
+
+```typescript
+// Security-first input handling
+import { z } from 'zod'
+import DOMPurify from 'isomorphic-dompurify'
+
+// ✅ Comprehensive input validation
+const UserRegistrationSchema = z.object({
+  email: z.string()
+    .email('Invalid email format')
+    .max(254, 'Email too long')
+    .toLowerCase()
+    .trim(),
+  
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password too long')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
+           'Password must contain uppercase, lowercase, number, and special character'),
+  
+  name: z.string()
+    .min(1, 'Name is required')
+    .max(100, 'Name too long')
+    .trim()
+    .refine(val => !/<script|javascript:/i.test(val), 'Invalid characters'),
+  
+  bio: z.string()
+    .max(500, 'Bio too long')
+    .optional()
+    .transform(val => val ? DOMPurify.sanitize(val) : val)
+})
+
+// ✅ Server Action with validation
+export async function createUserAction(formData: FormData) {
+  try {
+    // Rate limiting check
+    await checkRateLimit(request)
+    
+    // Input validation
+    const validatedData = UserRegistrationSchema.parse({
+      email: formData.get('email'),
+      password: formData.get('password'),
+      name: formData.get('name'),
+      bio: formData.get('bio')
+    })
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12)
+
+    // Create user with validated data
+    const user = await createUser({
+      ...validatedData,
+      password: hashedPassword
+    })
+
+    return { success: true, userId: user.id }
+  } catch (error) {
+    // Security: Don't leak internal errors
+    if (error instanceof z.ZodError) {
+      return { 
+        success: false, 
+        errors: error.flatten().fieldErrors 
+      }
+    }
+    
+    // Log internal error, return generic message
+    console.error('User creation failed:', error)
+    return { 
+      success: false, 
+      message: 'Account creation failed. Please try again.' 
+    }
+  }
+}
+```
+
+### Authentication and Authorization
+```typescript
+// Security patterns for auth
+
+// ✅ JWT token handling
+import { SignJWT, jwtVerify } from 'jose'
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
+
+export async function createToken(payload: { userId: string, role: string }) {
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('24h')
+    .sign(secret)
+}
+
+export async function verifyToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, secret)
+    return payload as { userId: string, role: string }
+  } catch {
+    return null
+  }
+}
+
+// ✅ Role-based access control
+const rolePermissions = {
+  admin: ['read', 'write', 'delete'],
+  editor: ['read', 'write'],
+  viewer: ['read']
+} as const
+
+export function hasPermission(
+  userRole: keyof typeof rolePermissions, 
+  requiredPermission: string
+): boolean {
+  return rolePermissions[userRole].includes(requiredPermission as any)
+}
+
+// ✅ Protected API routes
+export async function POST(request: Request) {
+  // Extract and verify token
+  const token = request.headers.get('authorization')?.replace('Bearer ', '')
+  
+  if (!token) {
+    return new Response('Unauthorized', { status: 401 })
+  }
+
+  const user = await verifyToken(token)
+  if (!user) {
+    return new Response('Invalid token', { status: 401 })
+  }
+
+  // Check permissions
+  if (!hasPermission(user.role, 'write')) {
+    return new Response('Forbidden', { status: 403 })
+  }
+
+  // Process request...
+}
+```
+
+### XSS and CSRF Protection
+```typescript
+// XSS Prevention patterns
+
+// ✅ Content sanitization
+import DOMPurify from 'isomorphic-dompurify'
+
+export function sanitizeHtml(dirty: string): string {
+  return DOMPurify.sanitize(dirty, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br'],
+    ALLOWED_ATTR: ['href', 'title'],
+    ALLOWED_URI_REGEXP: /^https?:\/\//
+  })
+}
+
+// ✅ Safe HTML rendering
+interface SafeHtmlProps {
+  content: string
+  className?: string
+}
+
+export function SafeHtml({ content, className }: SafeHtmlProps) {
+  const sanitizedContent = sanitizeHtml(content)
+  
+  return (
+    <div 
+      className={className}
+      dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+    />
+  )
+}
+
+// ✅ CSRF protection (automatic with Server Actions)
+// Next.js Server Actions include built-in CSRF protection
+export async function updateProfileAction(formData: FormData) {
+  // CSRF protection is automatic
+  // No additional configuration needed
+}
+```
+
+## Quality Gate Integration
+
+### Automated Security Scanning
+```typescript
+// Security scanning integration with Codacy
+
+// After any code changes, run security analysis:
+// ./tools/codacy-runtime.sh
+
+// Security checklist enforced by quality gates:
+// ✅ No hardcoded secrets or credentials
+// ✅ Input validation on all user inputs  
+// ✅ SQL injection prevention
+// ✅ XSS protection implemented
+// ✅ CSRF tokens in forms
+// ✅ Secure headers configured
+// ✅ Dependencies scanned for vulnerabilities
+```
+
+### Performance Monitoring
+```typescript
+// Performance monitoring and alerting
+
+// ✅ Bundle size monitoring
+export const bundleSizeConfig = {
+  maxSize: {
+    initial: '244kb',
+    route: '128kb',
+    component: '50kb'
+  },
+  warnThreshold: 0.9, // Warn at 90% of limit
+  errorThreshold: 1.0 // Error at 100% of limit
+}
+
+// ✅ Runtime performance monitoring
+export function measurePerformance<T>(
+  name: string, 
+  fn: () => T
+): T {
+  const start = performance.now()
+  const result = fn()
+  const end = performance.now()
+  
+  const duration = end - start
+  
+  // Log slow operations
+  if (duration > 100) {
+    console.warn(`Slow operation detected: ${name} took ${duration}ms`)
+  }
+  
+  // Send to monitoring service in production
+  if (process.env.NODE_ENV === 'production') {
+    analytics.track('performance-measure', {
+      operation: name,
+      duration,
+      timestamp: Date.now()
+    })
+  }
+  
+  return result
+}
+
+// ✅ Database query optimization
+export async function getProductsOptimized(filters: ProductFilters) {
+  return measurePerformance('getProducts', async () => {
+    return await db.product.findMany({
+      where: filters,
+      select: {
+        // Only select needed fields
+        id: true,
+        name: true,
+        price: true,
+        imageUrl: true
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20, // Implement pagination
+    })
+  })
+}
+```
+
+## Development Workflow Integration
+
+### Pre-commit Quality Gates
+```bash
+# Quality gates that must pass before commit:
+
+# 1. TypeScript compilation
+pnpm run type-check
+
+# 2. Linting with security rules
+pnpm run lint
+
+# 3. Unit and integration tests
+pnpm run test
+
+# 4. Security scanning
+./tools/codacy-runtime.sh
+
+# 5. Bundle size check
+pnpm run analyze
+
+# 6. Performance regression tests
+pnpm run test:performance
+```
+
+### Continuous Monitoring
+```typescript
+// Continuous performance and security monitoring
+
+// ✅ Error boundary with monitoring
+export class MonitoredErrorBoundary extends React.Component {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log to monitoring service
+    console.error('Component error:', error)
+    
+    if (process.env.NODE_ENV === 'production') {
+      analytics.track('component-error', {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+        timestamp: Date.now()
+      })
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback />
+    }
+
+    return this.props.children
+  }
+}
+
+// ✅ API route monitoring
+export function withMonitoring(handler: any) {
+  return async (request: Request) => {
+    const start = Date.now()
+    
+    try {
+      const response = await handler(request)
+      
+      // Track successful requests
+      const duration = Date.now() - start
+      
+      if (duration > 1000) {
+        console.warn(`Slow API response: ${request.url} took ${duration}ms`)
+      }
+      
+      return response
+    } catch (error) {
+      // Track errors
+      console.error('API error:', error)
+      
+      if (process.env.NODE_ENV === 'production') {
+        analytics.track('api-error', {
+          url: request.url,
+          method: request.method,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: Date.now()
+        })
+      }
+      
+      throw error
+    }
+  }
+}
+```
+
+This ruleset ensures all code meets performance and security standards while integrating with automated quality gates for continuous validation.

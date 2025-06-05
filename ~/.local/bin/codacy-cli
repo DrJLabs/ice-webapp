@@ -1,0 +1,2 @@
+#!/bin/bash
+bash <(curl -Ls https://raw.githubusercontent.com/codacy/codacy-cli-v2/main/codacy-cli.sh) "$@" 

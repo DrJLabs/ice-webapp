@@ -1,3 +1,7 @@
 
 
 #Ignore cursor AI rules
+
+
+#Ignore cursor AI rules
+.cursor/rules/codacy.mdc

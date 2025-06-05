@@ -1,0 +1,352 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: "Bleeding-edge development standards for Next.js 15, React 19, TypeScript 5.7, and modern web development practices"
+globs: "src/**/*.{ts,tsx,js,jsx}, pages/**/*.{ts,tsx}, app/**/*.{ts,tsx}, components/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Bleeding-Edge Development Standards for ICE-WEBAPP
+
+## Technology Stack Standards
+
+### Next.js 15 with App Router
+- **Always use App Router** - no Pages Router implementations
+- **Leverage Server Components** by default, only use Client Components when necessary
+- **Use Turbo optimization** for development builds (`pnpm run dev --turbo`)
+- **Implement proper metadata** for SEO in every page
+- **Utilize parallel routes** and intercepting routes for advanced UX
+
+```typescript
+// app/layout.tsx - Root layout with bleeding-edge features
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter'
+})
+
+export const metadata: Metadata = {
+  title: {
+    template: '%s | ICE WebApp',
+    default: 'ICE WebApp - AI-Optimized Development'
+  },
+  description: 'Bleeding-edge web development with AI optimization',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL!),
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'ICE WebApp'
+  }
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" className={inter.variable}>
+      <body className="font-sans antialiased">
+        {children}
+      </body>
+    </html>
+  )
+}
+```
+
+### React 19 Modern Patterns
+- **Use React Compiler optimizations** when available
+- **Implement Suspense boundaries** for loading states
+- **Leverage concurrent features** with startTransition
+- **Use React 19 hooks** (useOptimistic, useFormStatus, useActionState)
+- **Implement proper error boundaries** for graceful degradation
+
+```typescript
+// components/OptimizedComponent.tsx - React 19 patterns
+'use client'
+
+import { Suspense, useOptimistic, useActionState } from 'react'
+import { ErrorBoundary } from 'react-error-boundary'
+
+interface ComponentProps {
+  initialData: Data[]
+}
+
+function OptimizedComponent({ initialData }: ComponentProps) {
+  const [optimisticData, addOptimisticData] = useOptimistic(
+    initialData,
+    (state, newItem: Data) => [...state, { ...newItem, pending: true }]
+  )
+
+  const [state, formAction, isPending] = useActionState(
+    async (prevState: State, formData: FormData) => {
+      // Server action implementation
+      return await updateData(formData)
+    },
+    { success: false }
+  )
+
+  return (
+    <ErrorBoundary fallback={<ErrorFallback />}>
+      <Suspense fallback={<LoadingSkeleton />}>
+        <DataList data={optimisticData} />
+        <form action={formAction}>
+          <SubmitButton isPending={isPending} />
+        </form>
+      </Suspense>
+    </ErrorBoundary>
+  )
+}
+```
+
+### TypeScript 5.7 Strict Configuration
+- **Use strict mode** - no exceptions
+- **Implement proper type guards** for runtime safety
+- **Leverage template literal types** for type-safe APIs
+- **Use const assertions** for immutable data
+- **Implement branded types** for domain modeling
+
+```typescript
+// types/domain.ts - Advanced TypeScript patterns
+type Brand<T, B> = T & { __brand: B }
+
+export type UserId = Brand<string, 'UserId'>
+export type Email = Brand<string, 'Email'>
+
+// Template literal types for API routes
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+type ApiRoute<T extends string> = `/api/${T}`
+
+export type UserRoutes = 
+  | ApiRoute<`users`>
+  | ApiRoute<`users/${string}`>
+  | ApiRoute<`users/${string}/profile`>
+
+// Type-safe environment variables
+interface EnvironmentVariables {
+  readonly NODE_ENV: 'development' | 'production' | 'test'
+  readonly NEXT_PUBLIC_APP_URL: string
+  readonly NEXT_PUBLIC_APP_NAME: string
+}
+
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv extends EnvironmentVariables {}
+  }
+}
+
+// Utility types for components
+export type PropsWithClassName<T = {}> = T & {
+  className?: string
+}
+
+export type ComponentWithVariants<T extends Record<string, any>> = {
+  [K in keyof T]: T[K]
+}
+```
+
+## Code Quality and Architecture
+
+### Component Architecture Standards
+- **Use composition over inheritance** always
+- **Implement compound components** for complex UI patterns
+- **Follow atomic design principles** (atoms, molecules, organisms)
+- **Create reusable component variants** with class-variance-authority
+- **Implement proper prop interfaces** with JSDoc comments
+
+```typescript
+// components/ui/Button.tsx - Modern component architecture
+import * as React from 'react'
+import { Slot } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
+
+const buttonVariants = cva(
+  'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+        outline: 'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
+        secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        default: 'h-9 px-4 py-2',
+        sm: 'h-8 rounded-md px-3 text-xs',
+        lg: 'h-10 rounded-md px-8',
+        icon: 'h-9 w-9',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
+/**
+ * Button component with multiple variants and sizes.
+ * Supports polymorphic rendering via asChild prop.
+ */
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button'
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = 'Button'
+
+export { Button, buttonVariants }
+```
+
+### Data Fetching and State Management
+- **Use React Query v5** for server state management
+- **Implement Zustand** for client state with TypeScript
+- **Use Server Actions** for form submissions and mutations
+- **Implement optimistic updates** for better UX
+- **Cache strategies** with Next.js and React Query
+
+```typescript
+// lib/stores/user-store.ts - Modern state management
+import { create } from 'zustand'
+import { devtools, persist } from 'zustand/middleware'
+import { immer } from 'zustand/middleware/immer'
+
+interface UserState {
+  user: User | null
+  preferences: UserPreferences
+  actions: {
+    setUser: (user: User | null) => void
+    updatePreferences: (preferences: Partial<UserPreferences>) => void
+    clearUser: () => void
+  }
+}
+
+export const useUserStore = create<UserState>()(
+  devtools(
+    persist(
+      immer((set) => ({
+        user: null,
+        preferences: {
+          theme: 'system',
+          language: 'en',
+          notifications: true
+        },
+        actions: {
+          setUser: (user) => 
+            set((state) => {
+              state.user = user
+            }),
+          updatePreferences: (newPreferences) =>
+            set((state) => {
+              Object.assign(state.preferences, newPreferences)
+            }),
+          clearUser: () =>
+            set((state) => {
+              state.user = null
+            })
+        }
+      })),
+      { 
+        name: 'user-store',
+        partialize: (state) => ({ 
+          user: state.user,
+          preferences: state.preferences 
+        })
+      }
+    )
+  )
+)
+```
+
+## Performance and Optimization
+
+### Bundle Optimization
+- **Implement dynamic imports** for code splitting
+- **Use Next.js Image component** for all images
+- **Optimize fonts** with next/font
+- **Implement service worker** for caching
+- **Monitor bundle size** with webpack-bundle-analyzer
+
+### Accessibility and SEO
+- **WCAG 2.1 AA compliance** for all components
+- **Implement proper heading hierarchy** (h1-h6)
+- **Use semantic HTML** elements
+- **Provide alt text** for all images
+- **Implement keyboard navigation** for interactive elements
+- **Use ARIA attributes** appropriately
+
+### Testing Strategy
+- **Unit tests** with Vitest and Testing Library
+- **Integration tests** for user workflows
+- **E2E tests** with Playwright
+- **Accessibility tests** with axe-core
+- **Performance tests** with Lighthouse CI
+
+```typescript
+// tests/components/Button.test.tsx - Modern testing patterns
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { axe, toHaveNoViolations } from 'jest-axe'
+import { Button } from '@/components/ui/Button'
+
+expect.extend(toHaveNoViolations)
+
+describe('Button Component', () => {
+  it('renders with correct variant styles', () => {
+    render(<Button variant="destructive">Delete</Button>)
+    
+    const button = screen.getByRole('button', { name: /delete/i })
+    expect(button).toHaveClass('bg-destructive')
+  })
+
+  it('handles click events', async () => {
+    const user = userEvent.setup()
+    const handleClick = vi.fn()
+    
+    render(<Button onClick={handleClick}>Click me</Button>)
+    
+    await user.click(screen.getByRole('button'))
+    expect(handleClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('has no accessibility violations', async () => {
+    const { container } = render(<Button>Accessible Button</Button>)
+    const results = await axe(container)
+    
+    expect(results).toHaveNoViolations()
+  })
+
+  it('supports keyboard navigation', async () => {
+    const user = userEvent.setup()
+    const handleClick = vi.fn()
+    
+    render(<Button onClick={handleClick}>Keyboard accessible</Button>)
+    
+    await user.tab()
+    await user.keyboard(' ')
+    
+    expect(handleClick).toHaveBeenCalled()
+  })
+})

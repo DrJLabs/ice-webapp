@@ -1,5 +1,13 @@
+# Drop this at repo root and commit once
 engines:
-  eslint:  { enabled: true }
-  ruff:    { enabled: true }
-  bandit:  { enabled: true }
-  duplication: { enabled: true }
+  eslint:
+    enabled: true
+    max_number_issues: 0         # stop on first lint error
+  typescript-eslint:
+    enabled: true
+  bandit:
+    enabled: true
+    confidence: high
+    severity: high
+coverage:
+  min_coverage: 0                # enabled but non-blocking until tests exist

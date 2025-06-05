@@ -1,0 +1,365 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Quality Gates Integration for ICE-WEBAPP
+
+## Mandatory Quality Gate Sequence
+
+Every code change MUST pass this complete quality gate sequence:
+
+### 1. Pre-Implementation Phase
+```bash
+# ALWAYS start by reading project guidelines
+cat AGENTS.md
+
+# Understand existing patterns
+find src -name "*.tsx" -type f | head -5 | xargs cat
+
+# Check current project structure
+tree src -L 2
+```
+
+### 2. Implementation Phase Quality Checks
+
+#### TypeScript Validation (CRITICAL)
+```bash
+# Must pass with zero errors
+pnpm run type-check
+
+# If errors exist:
+# - Fix TypeScript issues immediately
+# - Do not proceed to next step
+# - Use strict mode - no 'any' types allowed
+```
+
+#### Code Quality Linting (CRITICAL)
+```bash
+# ESLint validation with autofix
+pnpm run lint:fix
+
+# Verify no remaining issues
+pnpm run lint
+
+# Standards enforced:
+# - ESLint 9 flat config compliance
+# - Prettier formatting consistency
+# - Import/export organization
+# - Unused code elimination
+```
+
+#### Security and Dependency Scanning (CRITICAL)
+```bash
+# Run Codacy analysis (automatically triggered by MCP)
+./tools/codacy-runtime.sh
+
+# Security checklist:
+# ✅ No hardcoded secrets
+# ✅ Input validation implemented
+# ✅ XSS protection in place
+# ✅ Dependencies vulnerability-free
+# ✅ Authentication/authorization correct
+```
+
+### 3. Testing Requirements (CRITICAL)
+
+#### Unit Testing
+```bash
+# All tests must pass
+pnpm run test
+
+# Coverage requirements:
+# - New components: >90% coverage
+# - Modified components: Maintain existing coverage
+# - Critical paths: 100% coverage
+```
+
+#### Accessibility Testing
+```bash
+# Accessibility compliance validation
+pnpm run test:a11y
+
+# Requirements:
+# - WCAG 2.1 AA compliance
+# - Keyboard navigation support
+# - Screen reader compatibility
+# - Color contrast compliance
+```
+
+#### End-to-End Testing (for significant features)
+```bash
+# E2E test validation
+pnpm run test:e2e
+
+# Only required for:
+# - New user-facing features
+# - Critical user journeys
+# - Complex component interactions
+```
+
+## AGENTS.md Compliance Checklist
+
+Before any implementation, verify compliance with AGENTS.md guidelines:
+
+### ✅ Scope Management
+- [ ] Task scope clearly defined and limited
+- [ ] Requirements validated by restating in different words
+- [ ] Large tasks divided into milestones
+- [ ] Dependencies identified and documented
+
+### ✅ Code Quality Standards
+- [ ] Production-ready code from first commit
+- [ ] Simple and maintainable implementation
+- [ ] Existing patterns and utilities used
+- [ ] TypeScript strict mode compliance
+
+### ✅ ICE-WEBAPP Specific Patterns
+- [ ] `cn()` utility used for conditional classes
+- [ ] Proper error handling and loading states
+- [ ] Zod schemas for data validation
+- [ ] Accessibility attributes implemented
+- [ ] Responsive design (mobile-first)
+
+### ✅ Testing Requirements
+- [ ] Unit tests written alongside implementation
+- [ ] Testing Library patterns followed
+- [ ] Accessibility features tested
+- [ ] Error state testing included
+
+## Automated Quality Gate Integration
+
+### Git Hook Integration
+```bash
+# Pre-commit hook (automatically installed)
+#!/bin/bash
+set -e
+
+echo "🧊 Running ICE-WEBAPP quality gates..."
+
+# 1. TypeScript validation
+echo "Checking TypeScript..."
+pnpm run type-check
+
+# 2. Linting
+echo "Running linter..."
+pnpm run lint:fix
+pnpm run lint
+
+# 3. Tests
+echo "Running tests..."
+pnpm run test --run
+
+# 4. Security scan (if enabled)
+if [ -f "./tools/codacy-runtime.sh" ]; then
+  echo "Running security scan..."
+  ./tools/codacy-runtime.sh
+fi
+
+echo "✅ All quality gates passed!"
+```
+
+### CI/CD Pipeline Integration
+```yaml
+# .github/workflows/quality-gates.yml
+name: ICE-WEBAPP Quality Gates
+
+on: [push, pull_request]
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: TypeScript validation
+        run: pnpm run type-check
+        
+      - name: Linting validation
+        run: pnpm run lint
+        
+      - name: Unit tests
+        run: pnpm run test --run
+        
+      - name: Build validation
+        run: pnpm run build
+        
+      - name: Bundle size check
+        run: pnpm run analyze
+```
+
+## Performance and Bundle Size Gates
+
+### Bundle Size Monitoring
+```typescript
+// Enforce bundle size limits
+const bundleLimits = {
+  maxInitialSize: 244 * 1024, // 244KB
+  maxRouteSize: 128 * 1024,   // 128KB
+  maxComponentSize: 50 * 1024  // 50KB
+}
+
+// Quality gate: Fail if limits exceeded
+if (bundleSize.initial > bundleLimits.maxInitialSize) {
+  throw new Error(`Initial bundle size exceeded: ${bundleSize.initial} > ${bundleLimits.maxInitialSize}`)
+}
+```
+
+### Core Web Vitals Monitoring
+```typescript
+// Performance quality gates
+const performanceThresholds = {
+  LCP: 2500,  // Largest Contentful Paint
+  FID: 100,   // First Input Delay
+  CLS: 0.1,   // Cumulative Layout Shift
+  FCP: 1800,  // First Contentful Paint
+  TTI: 3800   // Time to Interactive
+}
+
+// Automated performance testing
+export function validateWebVitals(metrics: WebVitals) {
+  const failures = []
+  
+  if (metrics.LCP > performanceThresholds.LCP) {
+    failures.push(`LCP exceeded: ${metrics.LCP}ms > ${performanceThresholds.LCP}ms`)
+  }
+  
+  if (failures.length > 0) {
+    throw new Error(`Performance quality gates failed: ${failures.join(', ')}`)
+  }
+}
+```
+
+## Error Handling and Recovery
+
+### Quality Gate Failure Handling
+```typescript
+// Automated recovery procedures
+interface QualityGateFailure {
+  gate: string
+  error: string
+  autofix?: boolean
+  instructions: string[]
+}
+
+const qualityGateRecovery: Record<string, QualityGateFailure> = {
+  'typescript': {
+    gate: 'TypeScript Validation',
+    error: 'Type checking failed',
+    autofix: false,
+    instructions: [
+      '1. Review TypeScript errors in terminal output',
+      '2. Fix type annotations and interfaces',
+      '3. Ensure strict mode compliance',
+      '4. Re-run: pnpm run type-check'
+    ]
+  },
+  
+  'linting': {
+    gate: 'ESLint Validation',
+    error: 'Linting errors detected',
+    autofix: true,
+    instructions: [
+      '1. Run: pnpm run lint:fix',
+      '2. Review remaining manual fixes needed',
+      '3. Verify: pnpm run lint'
+    ]
+  },
+  
+  'testing': {
+    gate: 'Unit Testing',
+    error: 'Test failures detected',
+    autofix: false,
+    instructions: [
+      '1. Review failed test output',
+      '2. Fix failing test cases',
+      '3. Update test snapshots if needed',
+      '4. Re-run: pnpm run test'
+    ]
+  },
+  
+  'security': {
+    gate: 'Security Scanning',
+    error: 'Security vulnerabilities found',
+    autofix: false,
+    instructions: [
+      '1. Review Codacy security report',
+      '2. Update vulnerable dependencies',
+      '3. Fix security code issues',
+      '4. Re-run: ./tools/codacy-runtime.sh'
+    ]
+  }
+}
+```
+
+## Success Metrics and Reporting
+
+### Quality Metrics Dashboard
+```typescript
+interface QualityMetrics {
+  typeScriptErrors: number
+  lintingErrors: number
+  testCoverage: number
+  securityIssues: number
+  bundleSize: number
+  performanceScore: number
+  lastUpdated: Date
+}
+
+// Track quality metrics over time
+export function generateQualityReport(): QualityMetrics {
+  return {
+    typeScriptErrors: 0,     // Target: 0
+    lintingErrors: 0,        // Target: 0
+    testCoverage: 95,        // Target: >90%
+    securityIssues: 0,       // Target: 0
+    bundleSize: 180,         // Target: <244KB
+    performanceScore: 98,    // Target: >95
+    lastUpdated: new Date()
+  }
+}
+```
+
+## Integration with Development Workflow
+
+### IDE Integration
+```json
+// .vscode/settings.json
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true,
+    "source.organizeImports": true
+  },
+  "typescript.preferences.strict": true,
+  "eslint.validate": ["typescript", "typescriptreact"],
+  "editor.formatOnSave": true
+}
+```
+
+### Development Scripts
+```json
+// package.json scripts integration
+{
+  "scripts": {
+    "quality:check": "pnpm run type-check && pnpm run lint && pnpm run test --run",
+    "quality:fix": "pnpm run lint:fix && pnpm run format",
+    "quality:full": "pnpm run quality:check && ./tools/codacy-runtime.sh && pnpm run build",
+    "dev:safe": "pnpm run quality:check && pnpm run dev"
+  }
+}
+```
+
+This comprehensive quality gate system ensures every code change meets ICE-WEBAPP standards and maintains the highest levels of quality, security, and performance.

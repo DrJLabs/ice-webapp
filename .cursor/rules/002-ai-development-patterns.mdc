@@ -1,0 +1,393 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+---
+description: "AI development patterns and prompt optimization for ChatGPT Codex integration with ICE-WEBAPP"
+globs: "ai/**/*.md, src/**/*.{ts,tsx}, app/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# AI Development Patterns for ICE-WEBAPP
+
+## Scope Management and Task Validation
+
+### Task Understanding Protocol
+Before implementing any feature, AI agents must:
+
+1. **Read AGENTS.md** to understand current project guidelines
+2. **Validate task scope** by restating requirements in different words
+3. **Identify dependencies** on existing code or external services
+4. **Confirm implementation approach** before starting
+5. **Break down large tasks** into smaller, manageable milestones
+
+```typescript
+// Example: Task validation for component creation
+/**
+ * TASK VALIDATION EXAMPLE:
+ * 
+ * Original Request: "Create a user profile component"
+ * 
+ * Validated Understanding:
+ * - Create a React component called UserProfile
+ * - Display user avatar, name, email, and role
+ * - Include edit functionality with form validation
+ * - Implement responsive design for mobile/desktop
+ * - Add loading and error states
+ * - Write comprehensive tests
+ * 
+ * Dependencies Identified:
+ * - User type definitions (src/types/user.ts)
+ * - Form validation (zod schemas)
+ * - UI components (Button, Input, Avatar)
+ * - Image optimization (Next.js Image)
+ * 
+ * Implementation Approach:
+ * 1. Create TypeScript interfaces
+ * 2. Implement component with variants
+ * 3. Add form handling with Server Actions
+ * 4. Write unit tests
+ * 5. Add to Storybook
+ */
+```
+
+### Incremental Development Pattern
+- **Milestone 1**: Core functionality with TypeScript interfaces
+- **Milestone 2**: UI implementation with Tailwind CSS
+- **Milestone 3**: Form handling and validation
+- **Milestone 4**: Error handling and loading states
+- **Milestone 5**: Testing and accessibility
+- **Milestone 6**: Documentation and examples
+
+## AI-Optimized Component Architecture
+
+### Semantic Component Structure
+Design components with AI readability and understanding in mind:
+
+```typescript
+// components/user/UserProfile.tsx - AI-optimized structure
+import { cn } from '@/lib/utils'
+import { User, UserUpdateSchema } from '@/types/user'
+import { Button } from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/Avatar'
+
+// Clear, descriptive interfaces for AI understanding
+interface UserProfileProps {
+  /** User data to display */
+  user: User
+  /** Whether the profile is in edit mode */
+  isEditable?: boolean
+  /** Callback when user data is updated */
+  onUpdate?: (userData: Partial<User>) => Promise<void>
+  /** Additional CSS classes */
+  className?: string
+}
+
+interface UserProfileState {
+  isEditing: boolean
+  isLoading: boolean
+  error: string | null
+}
+
+/**
+ * UserProfile Component
+ * 
+ * Displays user information with optional editing capabilities.
+ * Follows ICE-WEBAPP patterns for consistency and AI optimization.
+ * 
+ * Features:
+ * - Responsive design (mobile-first)
+ * - Accessibility compliant (WCAG 2.1 AA)
+ * - Form validation with Zod
+ * - Optimistic updates
+ * - Error boundaries
+ * 
+ * @example
+ * <UserProfile 
+ *   user={currentUser} 
+ *   isEditable={true}
+ *   onUpdate={handleUserUpdate}
+ * />
+ */
+export function UserProfile({ 
+  user, 
+  isEditable = false, 
+  onUpdate,
+  className 
+}: UserProfileProps) {
+  // Component implementation with clear patterns
+  const [state, setState] = useState<UserProfileState>({
+    isEditing: false,
+    isLoading: false,
+    error: null
+  })
+
+  // Server Action for form handling
+  const handleUpdate = async (formData: FormData) => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }))
+    
+    try {
+      const validatedData = UserUpdateSchema.parse({
+        name: formData.get('name'),
+        email: formData.get('email'),
+        bio: formData.get('bio')
+      })
+      
+      await onUpdate?.(validatedData)
+      setState(prev => ({ ...prev, isEditing: false }))
+    } catch (error) {
+      setState(prev => ({ 
+        ...prev, 
+        error: error instanceof Error ? error.message : 'Update failed' 
+      }))
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }))
+    }
+  }
+
+  return (
+    <div className={cn('user-profile', className)} data-testid="user-profile">
+      {/* Implementation with clear semantic structure */}
+    </div>
+  )
+}
+
+// Export types for external usage
+export type { UserProfileProps }
+```
+
+### AI Prompt Template Integration
+Components should reference AI prompt templates for consistency:
+
+```typescript
+/**
+ * AI PROMPT REFERENCE:
+ * This component follows the "Component Creation" prompt template
+ * from ai/prompts/development-prompts.md
+ * 
+ * Used patterns:
+ * - TypeScript with strict interfaces
+ * - Responsive Tailwind CSS design
+ * - Accessibility compliance
+ * - Error handling and loading states
+ * - Comprehensive testing approach
+ */
+```
+
+## Quality Gate Integration
+
+### Automated Quality Checks
+Every AI-generated code must pass these gates:
+
+```bash
+# Quality gate sequence - run after each implementation
+pnpm run type-check    # TypeScript validation
+pnpm run lint          # ESLint with autofix
+pnpm run test          # Vitest unit tests
+pnpm run test:a11y     # Accessibility testing
+./tools/codacy-runtime.sh  # Security and quality analysis
+```
+
+### Code Pattern Validation
+```typescript
+// Quality validation checklist for AI-generated components:
+
+// ✅ TypeScript Interface
+interface ComponentProps {
+  // All props properly typed
+}
+
+// ✅ Proper imports using path aliases
+import { cn } from '@/lib/utils'
+import { ComponentType } from '@/types/component'
+
+// ✅ Error handling
+const [error, setError] = useState<string | null>(null)
+
+// ✅ Loading states
+const [isLoading, setIsLoading] = useState(false)
+
+// ✅ Accessibility attributes
+<button 
+  aria-label="Save user profile"
+  aria-describedby="save-help-text"
+>
+
+// ✅ Responsive design
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+
+// ✅ SEO optimization (for pages)
+export const metadata: Metadata = {
+  title: 'User Profile',
+  description: 'User profile management page'
+}
+```
+
+## Testing Pattern Integration
+
+### Test-Driven Development for AI
+AI agents should follow TDD patterns:
+
+```typescript
+// tests/components/UserProfile.test.tsx
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { axe, toHaveNoViolations } from 'jest-axe'
+import { UserProfile } from '@/components/user/UserProfile'
+import { mockUser } from '@/tests/mocks/user'
+
+expect.extend(toHaveNoViolations)
+
+describe('UserProfile Component', () => {
+  // Test structure following ICE-WEBAPP patterns
+  
+  describe('Rendering', () => {
+    it('displays user information correctly', () => {
+      render(<UserProfile user={mockUser} />)
+      
+      expect(screen.getByText(mockUser.name)).toBeInTheDocument()
+      expect(screen.getByText(mockUser.email)).toBeInTheDocument()
+    })
+  })
+
+  describe('Interactions', () => {
+    it('enables edit mode when editable', async () => {
+      const user = userEvent.setup()
+      const onUpdate = vi.fn()
+      
+      render(
+        <UserProfile 
+          user={mockUser} 
+          isEditable={true}
+          onUpdate={onUpdate}
+        />
+      )
+      
+      await user.click(screen.getByRole('button', { name: /edit/i }))
+      expect(screen.getByRole('textbox', { name: /name/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('has no accessibility violations', async () => {
+      const { container } = render(<UserProfile user={mockUser} />)
+      const results = await axe(container)
+      
+      expect(results).toHaveNoViolations()
+    })
+
+    it('supports keyboard navigation', async () => {
+      const user = userEvent.setup()
+      
+      render(<UserProfile user={mockUser} isEditable={true} />)
+      
+      await user.tab() // Focus edit button
+      await user.keyboard(' ') // Activate edit mode
+      
+      expect(screen.getByRole('textbox')).toHaveFocus()
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('displays error messages appropriately', async () => {
+      const onUpdate = vi.fn().mockRejectedValue(new Error('Update failed'))
+      
+      render(<UserProfile user={mockUser} onUpdate={onUpdate} />)
+      
+      // Trigger error scenario
+      // Assert error handling
+    })
+  })
+})
+```
+
+## Performance Optimization Patterns
+
+### AI-Guided Performance
+```typescript
+// Performance optimization checklist for AI:
+
+// ✅ React.memo for expensive components
+const ExpensiveComponent = React.memo(({ data }: Props) => {
+  // Only re-render when data changes
+})
+
+// ✅ useCallback for event handlers
+const handleSubmit = useCallback(async (formData: FormData) => {
+  // Stable reference prevents unnecessary re-renders
+}, [dependencies])
+
+// ✅ useMemo for expensive calculations
+const processedData = useMemo(() => {
+  return expensiveDataProcessing(rawData)
+}, [rawData])
+
+// ✅ Dynamic imports for code splitting
+const HeavyComponent = lazy(() => import('@/components/HeavyComponent'))
+
+// ✅ Optimize bundle size
+import { debounce } from 'lodash-es/debounce' // Specific imports only
+```
+
+## Security Pattern Integration
+
+### Security-First Development
+```typescript
+// Security patterns for AI-generated code:
+
+// ✅ Input validation with Zod
+const UserInputSchema = z.object({
+  name: z.string().min(1).max(100).trim(),
+  email: z.string().email(),
+  bio: z.string().max(500).optional()
+})
+
+// ✅ XSS prevention
+const sanitizedContent = DOMPurify.sanitize(userInput)
+
+// ✅ CSRF protection (automatic with Next.js Server Actions)
+export async function updateUserAction(formData: FormData) {
+  // Server Action automatically includes CSRF protection
+}
+
+// ✅ Rate limiting awareness
+// Note: Implement rate limiting at API route level
+
+// ✅ Error messages without data leakage
+catch (error) {
+  // Don't expose internal error details to users
+  return { success: false, message: 'An error occurred' }
+}
+```
+
+## Documentation and Knowledge Transfer
+
+### Self-Documenting Code for AI
+```typescript
+/**
+ * AI KNOWLEDGE TRANSFER:
+ * 
+ * This component demonstrates ICE-WEBAPP patterns:
+ * 1. TypeScript interfaces for type safety
+ * 2. Compound component architecture
+ * 3. Tailwind CSS with design system
+ * 4. Accessibility compliance
+ * 5. Testing with multiple approaches
+ * 6. Performance optimization
+ * 7. Security considerations
+ * 
+ * Future AI sessions can reference this as a template
+ * for similar components.
+ */
+```
+
+### Pattern Recognition for AI
+- **File naming**: `ComponentName.tsx` for components
+- **Test naming**: `ComponentName.test.tsx` for tests
+- **Type definitions**: Clear, descriptive interfaces
+- **Error handling**: Consistent error state patterns
+- **Loading states**: Standard loading UI patterns
+- **Accessibility**: ARIA attributes and semantic HTML
+
+This ruleset ensures AI agents consistently produce high-quality, maintainable code that follows ICE-WEBAPP standards and integrates seamlessly with the existing codebase.
