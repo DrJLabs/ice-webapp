@@ -29,19 +29,18 @@ services:
       
     working_dir: /workspace/ice-webapp
     
-    # Clone repo and keep container running for testing
-    command: bash -c "
-      echo '🔄 Cloning ICE-WEBAPP repository for testing...' &&
-      if [ ! -d /workspace/ice-webapp-repo ]; then
-        git clone https://github.com/DrJLabs/ice-webapp.git /workspace/ice-webapp-repo &&
-        echo '✅ Repository cloned successfully' ||
-        echo '⚠️ Repository clone failed - using mounted files';
-      else
-        echo '✅ Repository already exists';
-      fi &&
-      echo '🚀 Container ready for testing' &&
+    # Setup nvm environment and keep container running
+    command: >
+      bash -c "
+      echo '🔧 Setting up Codex Universal environment...' &&
+      source ~/.nvm/nvm.sh &&
+      nvm use 22 &&
+      echo 'Node.js:' && node --version &&
+      echo 'npm:' && npm --version &&
+      echo 'pnpm:' && pnpm --version &&
+      echo '🚀 ICE-WEBAPP Codex Universal container ready' &&
       tail -f /dev/null
-    "
+      "
     
     # Enable networking for package installation during setup
     network_mode: bridge
@@ -70,7 +69,8 @@ services:
       - .:/workspace/ice-webapp
       - ./tests:/workspace/tests
     working_dir: /workspace
-    command: bash -c "
+    command: >
+      bash -c "
       echo '🧪 Starting ICE-WEBAPP Codex Test Suite' &&
       echo '=======================================' &&
       
@@ -90,7 +90,7 @@ services:
       echo '✅ Test 2 completed' &&
       
       echo '🎉 All tests completed'
-    "
+      "
     depends_on:
       - codex-mirror
     profiles:

@@ -57,10 +57,18 @@ setup_codex_environment() {
 verify_codex_packages() {
     log "Verifying ChatGPT Codex pre-installed packages..."
     
+    # Source nvm and bashrc for Codex Universal environment
+    if [[ -f ~/.bashrc ]]; then
+        source ~/.bashrc >/dev/null 2>&1 || true
+    fi
+    if [[ -f ~/.nvm/nvm.sh ]]; then
+        source ~/.nvm/nvm.sh >/dev/null 2>&1 || true
+    fi
+    
     # Node.js verification
     if command -v node >/dev/null 2>&1; then
         local node_ver=$(node --version)
-        log "Node.js: $node_ver (configurable to v22 in Codex settings)"
+        log "Node.js: $node_ver (Codex Universal pre-configured)"
     else
         error "Node.js not found - check Codex environment configuration"
     fi
@@ -101,6 +109,14 @@ configure_npm() {
 # Install pnpm using pre-installed npm with enhanced reliability
 install_pnpm() {
     log "Installing pnpm package manager..."
+    
+    # Source nvm environment for Codex Universal
+    if [[ -f ~/.bashrc ]]; then
+        source ~/.bashrc >/dev/null 2>&1 || true
+    fi
+    if [[ -f ~/.nvm/nvm.sh ]]; then
+        source ~/.nvm/nvm.sh >/dev/null 2>&1 || true
+    fi
     
     if command -v pnpm >/dev/null 2>&1; then
         log "pnpm already available: $(pnpm --version 2>/dev/null || echo 'detected')"
