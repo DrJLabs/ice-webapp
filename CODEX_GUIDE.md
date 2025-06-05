@@ -18,11 +18,11 @@ curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup-codex
 ```
 
 **Key advantages of the Codex-optimized script:**
-- ✅ Uses pre-installed Node.js 20 (no version conflicts)
+- ✅ Uses Node.js 22 with bleeding-edge dependencies (unified versions)
 - ✅ No sudo requirements (runs as root in Codex)
-- ✅ Optimized dependency versions for Node.js 20
-- ✅ Container-specific configurations
-- ✅ Faster setup (leverages pre-installed tools)
+- ✅ Identical dependency versions across all environments
+- ✅ Container-specific optimizations
+- ✅ True absolute dependency management cohesion
 
 **Alternative: Fix common issues then use main setup:**
 ```bash

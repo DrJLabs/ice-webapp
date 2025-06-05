@@ -47,7 +47,7 @@ A comprehensive starter scaffold optimized for AI-generated web applications usi
 
 **Method 1: Codex-Optimized Setup** ⭐
 ```bash
-# Leverages pre-installed packages (Node.js 20, Python 3.12, etc.)
+# Optimized for Codex with Node.js 22 and bleeding-edge dependencies
 curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup-codex.sh | bash
 ```
 
@@ -117,10 +117,12 @@ The ICE-WEBAPP maintains **absolute dependency management cohesion** across:
 
 | Environment | Status | Node.js | Package Manager | Auto-Setup | Script |
 |-------------|--------|---------|----------------|------------|--------|
-| **ChatGPT Codex** | ✅ | 20 (pre-installed) | npm → pnpm | Yes | `setup-codex.sh` |
+| **ChatGPT Codex** | ✅ | 22.12.0 | npm → pnpm | Yes | `setup-codex.sh` |
 | **Cursor (Local)** | ✅ | 22.12.0 | pnpm 9 | Yes | `setup.sh` |
 | **CI/CD Runner** | ✅ | 22.12.0 | pnpm 9 | Yes | `setup.sh` |
 | **Docker** | ✅ | 22.12.0 | pnpm 9 | Yes | `setup.sh` |
+
+**🎯 Unified Dependencies**: All environments now use identical bleeding-edge dependency versions for true absolute dependency management cohesion.
 
 ### Dependency Synchronization
 

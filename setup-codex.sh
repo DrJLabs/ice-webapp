@@ -23,8 +23,8 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly WORKSPACE_DIR="$PWD"
 readonly TOOLS_DIR="$WORKSPACE_DIR/tools"
 
-# Codex Pre-installed Package Versions (from screenshot)
-readonly NODE_VERSION="20"        # Pre-installed Node.js 20
+# Codex Environment Package Versions (updated to Node.js 22)
+readonly NODE_VERSION="22.12.0"   # Updated to Node.js 22 (configurable in Codex)
 readonly PYTHON_VERSION="3.12"    # Pre-installed Python 3.12
 readonly BUN_VERSION="1.2.14"     # Pre-installed Bun 1.2.14
 readonly JAVA_VERSION="21"        # Pre-installed Java 21
@@ -33,15 +33,15 @@ readonly RUST_VERSION="1.87.0"    # Pre-installed Rust 1.87.0
 readonly RUBY_VERSION="3.4.4"     # Pre-installed Ruby 3.4.4
 readonly SWIFT_VERSION="6.1"      # Pre-installed Swift 6.1
 
-# Dependency versions compatible with Node.js 20
-readonly NEXT_VERSION="15.0.3"    # Compatible with Node.js 20
-readonly REACT_VERSION="18.3.1"   # Stable with Node.js 20
-readonly TYPESCRIPT_VERSION="5.6.3"
-readonly TAILWIND_VERSION="3.4.14"
-readonly VITE_VERSION="5.4.10"
-readonly VITEST_VERSION="2.0.5"
-readonly PLAYWRIGHT_VERSION="1.47.2"
-readonly ESLINT_VERSION="8.57.1"  # Stable version for Node.js 20
+# Bleeding-edge dependency versions (unified for Node.js 22)
+readonly NEXT_VERSION="15.1.3"    # Latest Next.js
+readonly REACT_VERSION="19.0.0"   # Latest React
+readonly TYPESCRIPT_VERSION="5.7.2"
+readonly TAILWIND_VERSION="3.4.16"
+readonly VITE_VERSION="6.0.1"
+readonly VITEST_VERSION="2.1.6"
+readonly PLAYWRIGHT_VERSION="1.49.0"
+readonly ESLINT_VERSION="9.18.0"  # Latest ESLint
 
 log() {
     echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $*${NC}" >&2
@@ -110,13 +110,14 @@ setup_codex_environment() {
 verify_preinstalled_packages() {
     log "Verifying ChatGPT Codex pre-installed packages..."
     
-    # Check Node.js (should be v20.x)
+    # Check Node.js (should be v22.x)
     if command -v node >/dev/null 2>&1; then
         local node_version=$(node --version)
-        info "✅ Node.js: $node_version (pre-installed)"
+        info "✅ Node.js: $node_version (configurable in Codex)"
         
-        if [[ ! "$node_version" =~ ^v20\. ]]; then
-            warn "Expected Node.js v20.x, got $node_version"
+        if [[ ! "$node_version" =~ ^v22\. ]]; then
+            warn "Expected Node.js v22.x, got $node_version"
+            info "💡 You can update Node.js in Codex environment settings"
         fi
     else
         error "Node.js not found - Codex environment issue"
@@ -230,9 +231,9 @@ create_project_structure() {
     success "Project structure created"
 }
 
-# Package.json optimized for Node.js 20 and Codex
+# Package.json optimized for Node.js 22 (unified dependencies)
 create_package_json_codex() {
-    log "Creating package.json optimized for Codex Node.js 20..."
+    log "Creating package.json with bleeding-edge dependencies for Node.js 22..."
     
     cat > package.json << EOF
 {
@@ -241,7 +242,7 @@ create_package_json_codex() {
   "description": "AI-optimized web application starter for ChatGPT Codex",
   "type": "module",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "npm": ">=10.0.0"
   },
   "scripts": {
@@ -279,14 +280,14 @@ create_package_json_codex() {
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
     "typescript": "^${TYPESCRIPT_VERSION}",
     "eslint": "^${ESLINT_VERSION}",
     "eslint-config-next": "^${NEXT_VERSION}",
-    "@typescript-eslint/eslint-plugin": "^7.15.0",
-    "@typescript-eslint/parser": "^7.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
     "prettier": "^3.3.0",
     "prettier-plugin-tailwindcss": "^0.6.0",
     "tailwindcss": "^${TAILWIND_VERSION}",
@@ -310,7 +311,7 @@ create_package_json_codex() {
 }
 EOF
     
-    success "Package.json created for Node.js 20 compatibility"
+    success "Package.json created with bleeding-edge dependencies for Node.js 22"
 }
 
 # Create Codex-specific configuration files
@@ -346,7 +347,7 @@ const nextConfig = {
 module.exports = nextConfig
 EOF
 
-    # TypeScript config compatible with Node.js 20
+    # TypeScript config for Node.js 22
     cat > tsconfig.json << 'EOF'
 {
   "compilerOptions": {
@@ -424,7 +425,7 @@ main() {
     fi
     
     info "🧊 ICE-WEBAPP Codex Setup Starting..."
-    info "Optimized for ChatGPT Codex pre-installed packages"
+    info "Optimized for ChatGPT Codex with Node.js 22 and bleeding-edge dependencies"
     info "Environment: $env_type"
     echo
     

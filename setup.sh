@@ -17,27 +17,22 @@ readonly PURPLE='\033[0;35m'
 readonly CYAN='\033[0;36m'
 readonly NC='\033[0m' # No Color
 
-# Configuration
+# Configuration - Unified for Node.js 22 across all environments
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly WORKSPACE_DIR="$PWD"
-readonly NODE_VERSION="22.12.0"  # For non-Codex environments
-readonly NODE_VERSION_CODEX="20"  # Codex pre-installed version
+readonly NODE_VERSION="22.12.0"  # Unified Node.js version
 readonly PYTHON_VERSION="3.12"
 readonly TOOLS_DIR="$WORKSPACE_DIR/tools"
 
-# Dependency versions (bleeding edge for local/cursor, stable for Codex)
+# Dependency versions (bleeding edge - unified across all environments)
 readonly NEXT_VERSION="15.1.3"
-readonly NEXT_VERSION_CODEX="15.0.3"
 readonly REACT_VERSION="19.0.0"
-readonly REACT_VERSION_CODEX="18.3.1"
 readonly TYPESCRIPT_VERSION="5.7.2"
-readonly TYPESCRIPT_VERSION_CODEX="5.6.3"
 readonly TAILWIND_VERSION="3.4.16"
 readonly VITE_VERSION="6.0.1"
 readonly VITEST_VERSION="2.1.6"
 readonly PLAYWRIGHT_VERSION="1.49.0"
 readonly ESLINT_VERSION="9.18.0"
-readonly ESLINT_VERSION_CODEX="8.57.1"
 
 log() {
     echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $*${NC}" >&2
@@ -637,11 +632,11 @@ optimize_for_codex() {
         info "🚨 RECOMMENDATION: Use the specialized Codex setup script for optimal results:"
         info "   bash setup-codex.sh"
         info ""
-        info "The specialized script leverages pre-installed packages and handles:"
-        info "  - Node.js 20 (pre-installed)"
+        info "The specialized script handles Codex environment and provides:"
+        info "  - Node.js 22 setup and verification"
         info "  - No sudo requirements (runs as root)"
-        info "  - Optimized dependency versions"
-        info "  - Container-specific configurations"
+        info "  - Bleeding-edge dependency versions"
+        info "  - Container-specific optimizations"
         info ""
         
         read -p "Continue with general setup (y) or exit to use Codex script (n)? [y/N]: " -n 1 -r

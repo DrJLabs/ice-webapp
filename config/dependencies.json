@@ -1,9 +1,9 @@
 {
   "environments": {
     "codex": {
-      "description": "ChatGPT Codex pre-installed environment",
+      "description": "ChatGPT Codex environment with Node.js 22 support",
       "runtime": {
-        "node": "20",
+        "node": "22.12.0",
         "python": "3.12",
         "bun": "1.2.14",
         "java": "21",
@@ -13,32 +13,32 @@
         "swift": "6.1"
       },
       "dependencies": {
-        "next": "^15.0.3",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "typescript": "^5.6.3",
-        "eslint": "^8.57.1",
-        "tailwindcss": "^3.4.14",
-        "vitest": "^2.0.5",
-        "playwright": "^1.47.2"
+        "next": "^15.1.3",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "typescript": "^5.7.2",
+        "eslint": "^9.18.0",
+        "tailwindcss": "^3.4.16",
+        "vitest": "^2.1.6",
+        "playwright": "^1.49.0"
       },
       "devDependencies": {
-        "@types/node": "^20.14.0",
-        "@types/react": "^18.3.0",
-        "@types/react-dom": "^18.3.0",
-        "eslint-config-next": "^15.0.3",
-        "@typescript-eslint/eslint-plugin": "^7.15.0",
-        "@typescript-eslint/parser": "^7.15.0"
+        "@types/node": "^22.10.2",
+        "@types/react": "^19.0.1",
+        "@types/react-dom": "^19.0.1",
+        "eslint-config-next": "^15.1.3",
+        "@typescript-eslint/eslint-plugin": "^8.18.0",
+        "@typescript-eslint/parser": "^8.18.0"
       },
       "features": {
         "sudo_required": false,
-        "pre_installed_packages": true,
+        "unified_dependencies": true,
         "container_optimized": true,
         "proxy_handling": true
       }
     },
-    "bleeding_edge": {
-      "description": "Latest bleeding-edge versions for local/cursor environments",
+    "standard": {
+      "description": "Standard environment (local/cursor/ci) with Node.js 22",
       "runtime": {
         "node": "22.12.0",
         "python": "3.12"
@@ -63,7 +63,7 @@
       },
       "features": {
         "sudo_required": true,
-        "pre_installed_packages": false,
+        "unified_dependencies": true,
         "container_optimized": false,
         "proxy_handling": false
       }
@@ -98,17 +98,12 @@
     }
   },
   "compatibility_matrix": {
-    "node_20": {
-      "next": "<=15.0.x",
-      "react": "<=18.3.x",
-      "typescript": "<=5.6.x",
-      "eslint": "<=8.57.x"
-    },
-    "node_22": {
-      "next": ">=15.1.x",
-      "react": ">=19.0.x",
-      "typescript": ">=5.7.x",
-      "eslint": ">=9.18.x"
+    "node_22_unified": {
+      "next": "^15.1.3",
+      "react": "^19.0.0",
+      "typescript": "^5.7.2",
+      "eslint": "^9.18.0",
+      "note": "All environments now use identical bleeding-edge versions"
     }
   },
   "environment_detection": {
@@ -132,16 +127,18 @@
     "codex": {
       "script": "setup-codex.sh",
       "package_manager": "npm -> pnpm",
-      "node_installation": "use_preinstalled",
+      "node_installation": "configure_node22",
       "sudo_usage": false,
-      "proxy_cleanup": true
+      "proxy_cleanup": true,
+      "dependencies": "bleeding_edge_unified"
     },
-    "bleeding_edge": {
+    "standard": {
       "script": "setup.sh",
       "package_manager": "install_pnpm",
-      "node_installation": "install_latest",
+      "node_installation": "install_node22",
       "sudo_usage": true,
-      "proxy_cleanup": false
+      "proxy_cleanup": false,
+      "dependencies": "bleeding_edge_unified"
     }
   },
   "quality_gates": {
@@ -163,10 +160,11 @@
     }
   },
   "metadata": {
-    "version": "2025.1.1",
+    "version": "2025.1.2",
     "last_updated": "2025-01-03",
-    "codex_optimized": true,
-    "bleeding_edge_support": true,
-    "absolute_dependency_cohesion": true
+    "unified_node22": true,
+    "bleeding_edge_everywhere": true,
+    "absolute_dependency_cohesion": true,
+    "environment_note": "Both Codex and standard environments now use Node.js 22 with identical bleeding-edge dependencies"
   }
 } 

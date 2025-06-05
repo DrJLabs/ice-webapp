@@ -12,10 +12,10 @@ npm warn Unknown env config "http-proxy"
 Node.js version mismatch (v20.x instead of v22.x)
 ```
 
-**Best Solution**: Use the Codex-optimized setup script that leverages pre-installed packages:
+**Best Solution**: Use the Codex-optimized setup script with unified Node.js 22 dependencies:
 
 ```bash
-# Recommended: Use specialized Codex script (leverages Node.js 20, no sudo, optimized deps)
+# Recommended: Use specialized Codex script (Node.js 22, no sudo, bleeding-edge deps)
 curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup-codex.sh | bash
 ```
 
@@ -58,19 +58,16 @@ npm config delete proxy --global 2>/dev/null || true
 npm config delete https-proxy --global 2>/dev/null || true
 ```
 
-### 3. **Node.js Version Mismatch**
+### 3. **Node.js Version Configuration**
 ```
-Expected: v22.x, Got: v20.x
+Need to set Node.js to v22.x in Codex
 ```
 
-**Cause**: Container base image has older Node.js version.
+**Cause**: Node.js version needs to be configured in Codex environment.
 
-**Fix**:
-```bash
-sudo apt-get remove -y nodejs npm
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt-get install -y nodejs
-```
+**Fix**: Update Node.js version in your Codex environment settings to 22.x
+- The setup script will verify and guide you if version needs updating
+- Both Codex and standard environments now use the same Node.js 22.x
 
 ### 4. **pnpm Installation Fails**
 ```
