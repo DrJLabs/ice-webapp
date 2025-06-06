@@ -224,3 +224,10 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Docker - Prevent conflicts with Codex environment
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore
