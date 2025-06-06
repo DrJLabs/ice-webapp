@@ -1,4 +1,13 @@
 services:
+  codex-environment:
+    build:
+      context: .
+      dockerfile: Dockerfile.codex
+    volumes:
+      - .:/workspace/ice-webapp:cached
+    tty: true
+    stdin_open: true
+
   codex-mirror:
     image: ubuntu:24.04
     container_name: ice-webapp-codex-test

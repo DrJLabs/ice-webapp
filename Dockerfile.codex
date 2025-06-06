@@ -1,73 +1,27 @@
-# ICE-WEBAPP Codex Universal Alternative
-# Based on Ubuntu 24.04 to match Codex Universal
-FROM ubuntu:24.04
+# ICE-WEBAPP Codex Environment Replica
+# Version: 2.0
+# Base Image: Microsoft Dev Container (Ubuntu) - Provides a rich, pre-configured environment.
+FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
-# Prevent interactive prompts during package installation
+# --- Environment Configuration ---
+# Set non-interactive mode for package installations to avoid prompts.
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Set up environment variables
-ENV CODEX_ENV_PYTHON_VERSION=3.12
-ENV CODEX_ENV_NODE_VERSION=22
-ENV CONTAINER=docker
-ENV CODESPACE_NAME=codex
-ENV OPENAI_CODEX=true
-ENV SHELL=/bin/bash
+# --- Tooling Installation ---
+# Install pnpm globally using the pre-installed npm. This is the recommended and most reliable method.
+RUN npm install -g pnpm@latest
 
-# Install essential packages
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    git \
-    build-essential \
-    python3.12 \
-    python3.12-dev \
-    python3-pip \
-    ca-certificates \
-    gnupg \
-    lsb-release \
-    vim \
-    nano \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js 22 using NodeSource repository
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs
-
-# Install pnpm and yarn globally
-RUN npm install -g pnpm@latest yarn@latest
-
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Install Go 1.23.8
-RUN wget https://go.dev/dl/go1.23.8.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf go1.23.8.linux-amd64.tar.gz \
-    && rm go1.23.8.linux-amd64.tar.gz
-ENV PATH="/usr/local/go/bin:${PATH}"
-
-# Create workspace directory
-RUN mkdir -p /workspace/ice-webapp
-
-# Set working directory
+# --- Workspace Setup ---
+# Create and set the working directory for the project.
 WORKDIR /workspace/ice-webapp
 
-# Create a startup script
-RUN echo '#!/bin/bash\n\
-echo "=================================="\n\
-echo "Welcome to ICE-WEBAPP Codex Environment!"\n\
-echo "=================================="\n\
-echo "# Python: $(python3 --version)"\n\
-echo "# Node.js: $(node --version)"\n\
-echo "# npm: $(npm --version)"\n\
-echo "# pnpm: $(pnpm --version)"\n\
-echo "# Go: $(go version | cut -d\" \" -f3)"\n\
-echo "# Rust: $(rustc --version | cut -d\" \" -f2)"\n\
-echo "Environment ready. Dropping you into a bash shell."\n\
-exec bash "$@"' > /opt/entrypoint.sh \
-    && chmod +x /opt/entrypoint.sh
+# Copy the custom entrypoint script into the container and make it executable.
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Set the entrypoint
-ENTRYPOINT ["/opt/entrypoint.sh"]
-CMD [""] 
+# --- Container Execution ---
+# Set the custom entrypoint script to run when the container starts.
+ENTRYPOINT ["entrypoint.sh"]
+
+# Default command to run is a bash shell, allowing for interactive use.
+CMD ["bash"] 
