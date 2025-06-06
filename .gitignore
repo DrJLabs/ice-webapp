@@ -231,3 +231,6 @@ Dockerfile.*
 docker-compose.yml
 docker-compose.*.yml
 .dockerignore
+
+# Local secrets
+tools/.codacy-tokens

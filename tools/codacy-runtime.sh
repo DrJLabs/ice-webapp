@@ -6,6 +6,9 @@ set -Eeuo pipefail
 trap 'echo "[codacy-runtime] ❌ failed @ line $LINENO"; exit 1' ERR
 
 # ── secrets (must be exported or set in Actions secrets) ────────────
+if [[ -f "$PWD/tools/.codacy-tokens" ]]; then
+  source "$PWD/tools/.codacy-tokens"
+fi
 : "${CODACY_ACCOUNT_TOKEN:?export CODACY_ACCOUNT_TOKEN}"
 : "${CODACY_PROJECT_TOKEN:?export CODACY_PROJECT_TOKEN}"
 
