@@ -324,6 +324,7 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 
 > 💡 **Tip**: Use the AI prompts in `ai/prompts/` to accelerate your development with ChatGPT Codex!
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/30a4efd8781546779083f365f904ed07)](https://app.codacy.com/gh/DrJLabs/ice-webapp?utm_source=github.com&utm_medium=referral&utm_content=DrJLabs/ice-webapp&utm_campaign=Badge_Grade)
 [![Quality Gate Status](https://app.codacy.com/project/badge/Grade/your-project-id)](https://www.codacy.com/gh/DrJLabs/ice-webapp/dashboard)
 [![Coverage](https://app.codacy.com/project/badge/Coverage/your-project-id)](https://www.codacy.com/gh/DrJLabs/ice-webapp/dashboard)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=your-project&metric=security_rating)](https://sonarcloud.io/dashboard?id=your-project)
