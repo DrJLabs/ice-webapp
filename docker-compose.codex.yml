@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile.codex
     volumes:
       - .:/workspace/ice-webapp:cached
+    environment:
+      - CODACY_ACCOUNT_TOKEN=${CODACY_ACCOUNT_TOKEN}
+      - CODACY_PROJECT_TOKEN=${CODACY_PROJECT_TOKEN}
     tty: true
     stdin_open: true
 

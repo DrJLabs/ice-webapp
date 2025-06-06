@@ -3,13 +3,19 @@
 # Base Image: Microsoft Dev Container (Ubuntu) - Provides a rich, pre-configured environment.
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
+# Set environment variables
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+# Install Node.js and npm
+RUN apt-get update && apt-get install -y nodejs npm
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
 # --- Environment Configuration ---
 # Set non-interactive mode for package installations to avoid prompts.
 ENV DEBIAN_FRONTEND=noninteractive
-
-# --- Tooling Installation ---
-# Install pnpm globally using the pre-installed npm. This is the recommended and most reliable method.
-RUN npm install -g pnpm@latest
 
 # --- Workspace Setup ---
 # Create and set the working directory for the project.
