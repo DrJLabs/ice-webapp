@@ -9,5 +9,7 @@ engines:
     enabled: true
     confidence: high
     severity: high
+  trivy:
+    enabled: true
 coverage:
   min_coverage: 0                # enabled but non-blocking until tests exist
