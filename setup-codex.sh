@@ -210,10 +210,10 @@ create_package_json() {
     "eslint": "^9.28.0",
     "eslint-config-next": "^${NEXT_VERSION}",
     "tailwindcss": "^4.1.8",
-    "postcss": "^8.5.4",
-    "autoprefixer": "^10.4.21",
-    "vitest": "^3.2.2",
-    "playwright": "^1.52.0"
+"postcss": "^8.5.4",
+"autoprefixer": "^10.4.21",
+"vitest": "^3.2.2",
+"playwright": "^1.52.0"
   },
   "engines": {
     "node": ">=22.0.0"
