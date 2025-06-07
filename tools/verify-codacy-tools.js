@@ -178,6 +178,7 @@ function main() {
   console.log(`Codacy CLI: ${cliOk ? '✅ OK' : '❌ Issues found'}`);
   console.log(`MCP Config: ${mcpOk ? '✅ OK' : '❌ Issues found'}`);
   console.log(`Duplicates: ${dupsOk ? '✅ OK' : '❌ Issues found'}`);
+  console.log(`Phantom Servers: ${phantomOk ? '✅ OK' : '❌ Issues found'}`);
   console.log(`Env Variables: ${envOk ? '✅ OK' : '❌ Issues found'}`);
   
   if (cliOk && mcpOk && dupsOk && envOk) {

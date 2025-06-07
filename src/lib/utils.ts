@@ -50,15 +50,16 @@ export function generateId(): string {
 /**
  * Debounce function
  */
-export function debounce<T extends (...args: any[]) => any>(
+// eslint-disable-next-line no-unused-vars
+export function debounce<T extends (...unused: any[]) => any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-  
-  return (...args: Parameters<T>) => {
+): (..._args: Parameters<T>) => void { // eslint-disable-line no-unused-vars
+  let timeout: ReturnType<typeof setTimeout> | null = null
+
+  return (..._args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
+    timeout = setTimeout(() => func(..._args), wait)
   }
 }
 

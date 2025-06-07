@@ -21,7 +21,6 @@ const WORKSPACE_DIR = process.cwd();
 const GLOBAL_MCP_PATH = path.join(HOME_DIR, '.cursor', 'mcp.json');
 const PROJECT_MCP_PATH = path.join(WORKSPACE_DIR, '.cursor', 'mcp.json');
 const CODACY_CLI_PATH = path.join(WORKSPACE_DIR, 'tools', 'codacy');
-const SYSTEM_BIN_PATH = '/usr/local/bin/codacy';
 
 // ANSI color codes
 const RESET = '\x1b[0m';

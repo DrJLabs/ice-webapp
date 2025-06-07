@@ -7,7 +7,6 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
     'next/core-web-vitals',
   ],
   parser: '@typescript-eslint/parser',
@@ -18,7 +17,7 @@ module.exports = {
     ecmaVersion: 2021,
     sourceType: 'module',
   },
-  plugins: ['@typescript-eslint'],
+  plugins: [],
   rules: {
     // Custom rules here
   },
