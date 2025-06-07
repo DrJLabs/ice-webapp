@@ -66,8 +66,15 @@ jobs:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           api-token: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
           upload: true
+          output: codacy.sarif
+          format: sarif
           # Do not fail the build based on issues, let Codacy's PR status checks handle it
-          max-allowed-issues: 0
+          max-allowed-issues: 2147483647
+
+      - name: Upload Codacy SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: codacy.sarif
 
       # Configure Codacy Quality Gates
       - name: Configure Codacy Quality Gates
