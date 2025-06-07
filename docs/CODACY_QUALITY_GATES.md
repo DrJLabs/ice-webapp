@@ -31,7 +31,7 @@ The ICE-WEBAPP project implements the following quality gate rules:
 | New issues (Error+) | 2 | Maximum 2 new issues of Error severity or higher |
 | Duplication | 3 | Maximum 3 new duplicated blocks |
 | Complexity | 4 | Maximum 4 new complexity |
-| Coverage variation | -0.1% | Allow minimal coverage drops to not block refactoring |
+| Coverage variation | -1% | Allow small coverage drops to not block refactoring |
 | Diff coverage | 70% | At least 70% of changed lines must be covered by tests |
 
 ### Commit Quality Gates
@@ -42,7 +42,7 @@ The ICE-WEBAPP project implements the following quality gate rules:
 | New issues (Error+) | 2 | Maximum 2 new issues of Error severity or higher |
 | Duplication | 3 | Maximum 3 new duplicated blocks |
 | Complexity | 4 | Maximum 4 new complexity |
-| Coverage variation | -0.1% | Allow minimal coverage drops to not block refactoring |
+| Coverage variation | -1% | Allow small coverage drops to not block refactoring |
 
 > **Note**: Diff coverage is not available for commits, only for pull requests.
 

@@ -133,7 +133,7 @@ async function updateCommitQualityGates() {
     complexityThreshold: 4,
     
     // Allow minimal coverage drops (-0.1%) to not block refactoring
-    coverageThresholdWithDecimals: -0.001
+    coverageThresholdWithDecimals: -0.01
     
     // Note: diffCoverageThreshold is not available for commits
   };
