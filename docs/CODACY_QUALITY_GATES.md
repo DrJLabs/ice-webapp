@@ -98,15 +98,11 @@ If you need to customize the quality gates for your specific project needs:
 
 2. Run the script again to apply your custom settings
 
-## Integration with CI/CD
+## Integration with CI/CD and Git Hooks
 
-You can integrate these scripts into your CI/CD pipeline by:
+### GitHub Actions Workflow
 
-1. Adding the Codacy tokens as secrets in your CI/CD environment
-2. Running the scripts as part of your pipeline setup
-3. Running tests and uploading coverage reports to Codacy
-
-Example GitHub Actions workflow step:
+The Codacy quality gates are automatically configured in our GitHub Actions workflow:
 
 ```yaml
 - name: Configure Codacy Quality Gates
@@ -116,6 +112,29 @@ Example GitHub Actions workflow step:
   run: |
     pnpm run codacy:setup-all
 ```
+
+### Git Hooks
+
+We use Husky to enforce quality gates locally before commits and pushes:
+
+#### Pre-commit Hook
+
+The pre-commit hook runs the following quality gates:
+- TypeScript validation
+- ESLint checks
+- Unit tests with coverage
+- Security scan with Codacy
+- Coverage upload to Codacy
+
+#### Pre-push Hook
+
+The pre-push hook enforces minimum test coverage thresholds:
+- Lines coverage: 70%
+- Statements coverage: 70%
+- Functions coverage: 65%
+- Branches coverage: 60%
+
+This ensures that all code pushed to the repository meets our quality standards.
 
 ## Best Practices
 

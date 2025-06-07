@@ -15,7 +15,8 @@
     "coverage:upload": "export CODACY_PROJECT_TOKEN=$CODACY_PROJECT_TOKEN && bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r ./coverage/lcov.info",
     "codacy:quality-gates": "node scripts/codacy-quality-gates.js",
     "codacy:commit-quality-gates": "node scripts/codacy-commit-quality-gates.js",
-    "codacy:setup-all": "pnpm run codacy:quality-gates && pnpm run codacy:commit-quality-gates"
+    "codacy:setup-all": "pnpm run codacy:quality-gates && pnpm run codacy:commit-quality-gates",
+    "prepare": "husky"
   },
   "dependencies": {
     "clsx": "^2.1.0",
@@ -34,6 +35,7 @@
     "esbuild": "^0.25.0",
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.1.3",
+    "husky": "^9.1.7",
     "jsdom": "^24.0.0",
     "playwright": "^1.49.0",
     "postcss": "^8.4.38",
