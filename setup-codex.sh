@@ -27,9 +27,9 @@ success() { echo "[SUCCESS] $*"; }
 # Codex pre-installed package versions (Node.js 22 configurable)
 readonly NODE_VERSION="22.12.0"
 readonly PYTHON_VERSION="3.12"
-readonly NEXT_VERSION="15.1.3"
-readonly REACT_VERSION="19.0.0"
-readonly TYPESCRIPT_VERSION="5.7.2"
+readonly NEXT_VERSION="15.3.3"
+readonly REACT_VERSION="19.1.0"
+readonly TYPESCRIPT_VERSION="5.8.3"
 
 # Essential Codex environment setup
 setup_codex_environment() {
@@ -200,20 +200,20 @@ create_package_json() {
     "react": "^${REACT_VERSION}",
     "react-dom": "^${REACT_VERSION}",
     "clsx": "^2.1.0",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "@types/react": "^19.0.1",
-    "@types/react-dom": "^19.0.1",
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.6",
     "typescript": "^${TYPESCRIPT_VERSION}",
-    "eslint": "^9.18.0",
+    "eslint": "^9.28.0",
     "eslint-config-next": "^${NEXT_VERSION}",
-    "tailwindcss": "^3.4.16",
-    "postcss": "^8.4.38",
-    "autoprefixer": "^10.4.19",
-    "vitest": "^2.1.6",
-    "playwright": "^1.49.0"
+    "tailwindcss": "^4.1.8",
+    "postcss": "^8.5.4",
+    "autoprefixer": "^10.4.21",
+    "vitest": "^3.2.2",
+    "playwright": "^1.52.0"
   },
   "engines": {
     "node": ">=22.0.0"
