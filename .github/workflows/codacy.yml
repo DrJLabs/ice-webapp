@@ -62,6 +62,13 @@ jobs:
           # Do not fail the build based on issues, let Codacy's PR status checks handle it
           max-allowed-issues: 0
 
+      # Configure Codacy Quality Gates
+      - name: Configure Codacy Quality Gates
+        run: pnpm run codacy:setup-all
+        env:
+          CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
       # Upload test coverage
       - name: Upload coverage
         uses: codacy/codacy-coverage-reporter-action@v1
