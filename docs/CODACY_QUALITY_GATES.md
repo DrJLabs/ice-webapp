@@ -15,7 +15,7 @@ The ICE-WEBAPP project includes scripts that configure quality gates based on be
 
 ## Prerequisites
 
-- Node.js 16+
+ - Node.js 22+
 - A Codacy account with your repository added
 - Codacy API tokens configured in `tools/.codacy-tokens`
 

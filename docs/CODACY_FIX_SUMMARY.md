@@ -7,7 +7,7 @@
    - Added PATH with tools directory to ensure CLI is found
 
 2. **Node.js Version Mismatch**
-   - Updated package.json engines field to support Node.js v20.19.1 instead of requiring v22.0.0+
+   - Updated package.json engines field to support Node.js v22.12.0 to align with Codex
 
 3. **Environment Script Command Correction**
    - Fixed the CLI command in tools/codacy-env.sh to use `version` instead of `--version`
