@@ -200,7 +200,7 @@ create_package_json() {
     "react": "^${REACT_VERSION}",
     "react-dom": "^${REACT_VERSION}",
     "clsx": "^2.1.0",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -209,7 +209,7 @@ create_package_json() {
     "typescript": "^${TYPESCRIPT_VERSION}",
     "eslint": "^9.18.0",
     "eslint-config-next": "^${NEXT_VERSION}",
-    "tailwindcss": "^3.4.16",
+    "tailwindcss": "^4.1.8",
     "postcss": "^8.4.38",
     "autoprefixer": "^10.4.19",
     "vitest": "^2.1.6",
