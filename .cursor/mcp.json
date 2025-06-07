@@ -4,12 +4,12 @@
       "command": "npx",
       "args": [
         "-y",
-        "@codacy/codacy-mcp@0.6.13"
+        "@codacy/codacy-mcp@latest"
       ],
       "env": {
-        "CODACY_ACCOUNT_TOKEN": "{$CODACY_ACCOUNT_TOKEN}",
-        "CODACY_CLI_VERSION": "1.0.0-main.332.sha.63a2be3"
+        "CODACY_CLI_PATH": "/home/drj/ice-webapp/tools/codacy",
+        "PATH": "/home/drj/ice-webapp/tools:/home/drj/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
       }
     }
   }
-} 
+}
