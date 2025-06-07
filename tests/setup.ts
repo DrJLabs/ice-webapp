@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import React from 'react'
+import { afterEach, vi } from 'vitest'
 
 // Cleanup after each test case
 afterEach(() => {
@@ -13,7 +14,11 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
-}
+  takeRecords() { return [] }
+  root = null
+  rootMargin = ''
+  thresholds = []
+} as any
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -21,7 +26,8 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
-}
+  disconnectAll() {}
+} as any
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
