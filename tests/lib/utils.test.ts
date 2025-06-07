@@ -9,8 +9,9 @@ import {
   kebabToTitle,
   safeJsonParse,
   delay,
-  copyToClipboard
-} from '../../src/lib/utils';
+  copyToClipboard,
+  isValidEmail
+} from '@/lib/utils';
 
 describe('Utility Functions', () => {
   describe('cn (classname utility)', () => {
@@ -36,6 +37,14 @@ describe('Utility Functions', () => {
       expect(formatCurrency(1000, 'EUR')).toBe('€1,000.00');
       expect(formatCurrency(1000, 'JPY')).toBe('¥1,000');
     });
+
+    it('should format a number into USD currency', () => {
+      expect(formatCurrency(123.45)).toBe('$123.45');
+    });
+
+    it('should format a number into EUR currency', () => {
+      expect(formatCurrency(543.21, 'EUR')).toBe('€543.21');
+    });
   });
 
   describe('truncateText', () => {
@@ -49,6 +58,14 @@ describe('Utility Functions', () => {
 
     it('should handle empty strings', () => {
       expect(truncateText('', 5)).toBe('');
+    });
+
+    it('should not truncate text if it is shorter than or equal to the length', () => {
+      expect(truncateText('short', 10)).toBe('short');
+    });
+
+    it('should truncate text if it is longer than the length', () => {
+      expect(truncateText('this is a long text', 10)).toBe('this is a ...');
     });
   });
 
@@ -164,8 +181,12 @@ describe('Utility Functions', () => {
         configurable: true,
       });
       
-      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
-      const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
+      // Create a mock element to return from appendChild
+      const mockElement = document.createElement('textarea');
+      
+      // Mock appendChild and removeChild with proper return values
+      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockElement);
+      const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockElement);
       
       const result = await copyToClipboard('test text');
       
@@ -178,4 +199,16 @@ describe('Utility Functions', () => {
       removeChildSpy.mockRestore();
     });
   });
-}); 
+
+  describe('isValidEmail', () => {
+    it('should return true for a valid email', () => {
+      expect(isValidEmail('test@example.com')).toBe(true);
+    });
+
+    it('should return false for an invalid email', () => {
+      expect(isValidEmail('not-an-email')).toBe(false);
+      expect(isValidEmail('test@.com')).toBe(false);
+      expect(isValidEmail('@example.com')).toBe(false);
+    });
+  });
+});

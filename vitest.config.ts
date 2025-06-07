@@ -9,7 +9,7 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'lcov', 'json-summary'],
+      reporter: ['text', 'json', 'html', 'lcov', 'json-summary'],
       include: ['src/lib/**/*.{ts,tsx}'],
       exclude: [
         'src/**/*.d.ts',
@@ -33,4 +33,4 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
     },
   },
-}); 
+});

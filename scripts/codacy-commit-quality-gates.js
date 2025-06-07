@@ -1,103 +1,72 @@
 #!/usr/bin/env node
+
 /**
- * Codacy Commit Quality Gates Configuration
+ * Script to configure Codacy quality gates for commits in the ICE-WEBAPP project
  * 
- * This script configures quality gates for commits in Codacy.
- * It sets standards for code quality, security, and test coverage.
+ * This script configures best practices for React applications:
+ * 1. Zero tolerance for security issues
+ * 2. Strict limits on new issues (max 2 of Error level or above)
+ * 3. Allow small coverage drops (-0.1%) to avoid blocking refactoring
+ * 4. Limits on complexity and duplication
+ * 
+ * Note: diffCoverageThreshold is not available for commits, only for PRs
+ * 
+ * @global require, process, console, __dirname
  */
 
-const https = require('https');
-const { execSync } = require('child_process');
+/* eslint-env node */
+
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
-// Load Codacy tokens from environment or file
-const loadTokens = () => {
-  if (process.env.CODACY_ACCOUNT_TOKEN && process.env.CODACY_PROJECT_TOKEN) {
-    return {
-      accountToken: process.env.CODACY_ACCOUNT_TOKEN,
-      projectToken: process.env.CODACY_PROJECT_TOKEN
-    };
-  }
-  
-  // Try to load from file
-  const tokenPath = path.join(__dirname, '../tools/.codacy-tokens');
-  if (fs.existsSync(tokenPath)) {
-    const content = fs.readFileSync(tokenPath, 'utf8');
-    const accountTokenMatch = content.match(/CODACY_ACCOUNT_TOKEN="([^"]+)"/);
-    const projectTokenMatch = content.match(/CODACY_PROJECT_TOKEN="([^"]+)"/);
-    
-    if (accountTokenMatch && projectTokenMatch) {
-      return {
-        accountToken: accountTokenMatch[1],
-        projectToken: projectTokenMatch[1]
-      };
-    }
-  }
-  
-  throw new Error('Codacy tokens not found. Please set CODACY_ACCOUNT_TOKEN and CODACY_PROJECT_TOKEN environment variables or create tools/.codacy-tokens file.');
+// Load Codacy tokens from env file
+require('dotenv').config({ path: path.join(__dirname, '../tools/.codacy-tokens') });
+
+// Configuration values
+const CONFIG = {
+  ACCOUNT_TOKEN: process.env.CODACY_ACCOUNT_TOKEN,
+  PROJECT_TOKEN: process.env.CODACY_PROJECT_TOKEN,
+  API_BASE_URL: 'api.codacy.com',
+  // Get these values from your repository URL
+  PROVIDER: 'gh', // Use 'gh' for GitHub, 'gl' for GitLab, 'bb' for Bitbucket
+  ORGANIZATION: '', // Set to your GitHub organization or username
+  REPOSITORY: 'ice-webapp', // Set to your repository name
 };
 
-// Configure commit quality gates using project token
-const configureCommitQualityGates = async () => {
-  const { projectToken } = loadTokens();
-  
-  console.log(`🧊 Configuring Codacy commit quality gates using project token...`);
-  
-  // Quality gate settings based on best practices for this project
-  const qualityGateSettings = {
-    'security': { enabled: true, value: 0 },           // Zero tolerance for security issues
-    'issues': { enabled: true, value: 2 },             // Maximum 2 new issues of Error severity
-    'duplication': { enabled: true, value: 3 },        // Maximum 3 new duplicated blocks
-    'complexity': { enabled: true, value: 4 },         // Maximum 4 new complexity
-    'coverage': { enabled: true, value: -1 }           // Allow 1% drop in coverage
-    // Note: diff_coverage is not available for commits, only for PRs
-  };
-  
-  // Configure each quality gate for commits
-  const endpoint = `https://app.codacy.com/api/v3/project/${projectToken}/settings/quality/commit-gates`;
-  
+// Extract organization and repository from Git remote URL
+function extractRepoInfoFromGit() {
   try {
-    const response = await makeRequest('GET', endpoint);
-    const currentSettings = JSON.parse(response);
-    
-    console.log('Current commit quality gate settings:');
-    Object.entries(currentSettings).forEach(([key, value]) => {
-      console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}, value: ${value.value}`);
-    });
-    
-    // Update settings
-    const updatedSettings = { ...currentSettings };
-    Object.entries(qualityGateSettings).forEach(([key, value]) => {
-      if (updatedSettings[key]) {
-        updatedSettings[key] = value;
+    const gitConfigPath = path.join(process.cwd(), '.git', 'config');
+    if (fs.existsSync(gitConfigPath)) {
+      const gitConfig = fs.readFileSync(gitConfigPath, 'utf8');
+      const remoteUrlMatch = gitConfig.match(/url\s*=\s*(?:https:\/\/github\.com\/|git@github\.com:)([^/]+)\/([^.]+)(?:\.git)?/);
+      
+      if (remoteUrlMatch && remoteUrlMatch.length >= 3) {
+        CONFIG.ORGANIZATION = remoteUrlMatch[1];
+        CONFIG.REPOSITORY = remoteUrlMatch[2];
+        console.log(`Detected repository: ${CONFIG.ORGANIZATION}/${CONFIG.REPOSITORY}`);
       }
-    });
-    
-    const updateResponse = await makeRequest('PUT', endpoint, updatedSettings);
-    const result = JSON.parse(updateResponse);
-    
-    console.log('\n✅ Commit quality gates updated successfully:');
-    Object.entries(result).forEach(([key, value]) => {
-      console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}, value: ${value.value}`);
-    });
+    }
   } catch (error) {
-    console.error('❌ Error configuring commit quality gates:', error.message);
-    process.exit(1);
+    console.error('Error extracting repository info from Git:', error.message);
   }
-};
+}
 
-// Helper function to make HTTP requests
-const makeRequest = (method, url, data = null) => {
+// Make API request to Codacy
+function makeApiRequest(method, path, data = null) {
   return new Promise((resolve, reject) => {
     const options = {
-      method,
+      hostname: CONFIG.API_BASE_URL,
+      path: `/api/v3${path}`,
+      method: method,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'api-token': CONFIG.ACCOUNT_TOKEN,
+        'Content-Type': 'application/json',
+      },
     };
-    
-    const req = https.request(url, options, (res) => {
+
+    const req = https.request(options, (res) => {
       let responseData = '';
       
       res.on('data', (chunk) => {
@@ -106,7 +75,11 @@ const makeRequest = (method, url, data = null) => {
       
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(responseData);
+          try {
+            resolve(responseData ? JSON.parse(responseData) : {});
+          } catch (e) {
+            resolve(responseData);
+          }
         } else {
           reject(new Error(`Request failed with status code ${res.statusCode}: ${responseData}`));
         }
@@ -123,10 +96,150 @@ const makeRequest = (method, url, data = null) => {
     
     req.end();
   });
-};
+}
+
+// Configure commit quality gates based on best practices
+async function configureCommitQualityGates() {
+  try {
+    // 1. Get current quality gates configuration
+    console.log('🔍 Getting current commit quality gates configuration...');
+    
+    // Try using the Project API first (more reliable)
+    const projectEndpoint = `/project/${CONFIG.PROJECT_TOKEN}/settings/quality/commit-gates`;
+    
+    try {
+      const currentSettings = await makeApiRequest('GET', projectEndpoint);
+      console.log('Current commit quality gate settings:');
+      Object.entries(currentSettings).forEach(([key, value]) => {
+        if (value && typeof value === 'object') {
+          console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}, value: ${value.value}`);
+        }
+      });
+      
+      // 2. Update with our recommended settings
+      console.log('\n🔄 Updating commit quality gates to ICE-WEBAPP standards...');
+      
+      // Quality gate settings optimized for React applications
+      const updatedSettings = {
+        ...currentSettings,
+        'security': { enabled: true, value: 0 },  // Zero tolerance for security issues
+        'issues': { enabled: true, value: 2 },    // Max 2 new issues of Error severity
+        'duplication': { enabled: true, value: 3 }, // Max 3 new duplicated blocks
+        'complexity': { enabled: true, value: 4 }, // Max complexity of 4
+        'coverage': { enabled: true, value: -0.1 }, // Allow tiny coverage drops
+      };
+      
+      // 3. Apply the updated settings
+      const result = await makeApiRequest('PUT', projectEndpoint, updatedSettings);
+      
+      console.log('✅ Commit quality gates updated successfully:');
+      Object.entries(result).forEach(([key, value]) => {
+        if (value && typeof value === 'object') {
+          console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}, value: ${value.value}`);
+        }
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error using project token API:', error.message);
+      console.log('⚠️ Falling back to organization/repository API...');
+      
+      // Extract repo info from Git if not already set
+      if (!CONFIG.ORGANIZATION) {
+        extractRepoInfoFromGit();
+      }
+      
+      if (!CONFIG.ORGANIZATION || !CONFIG.REPOSITORY) {
+        throw new Error('Could not determine organization/repository. Please set them in the CONFIG object.');
+      }
+      
+      // Try the organization/repository API
+      const orgRepoEndpoint = `/${CONFIG.PROVIDER}/organizations/${CONFIG.ORGANIZATION}/repositories/${CONFIG.REPOSITORY}/settings/quality/commit-gates`;
+      
+      const currentSettings = await makeApiRequest('GET', orgRepoEndpoint);
+      console.log('Current commit quality gate settings:');
+      Object.entries(currentSettings).forEach(([key, value]) => {
+        if (value && typeof value === 'object') {
+          console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}, value: ${value.value}`);
+        }
+      });
+      
+      // Update with our recommended settings
+      console.log('\n🔄 Updating commit quality gates to ICE-WEBAPP standards...');
+      
+      // Quality gate settings optimized for React applications
+      const updatedSettings = {
+        ...currentSettings,
+        'security': { enabled: true, value: 0 },
+        'issues': { enabled: true, value: 2 },
+        'duplication': { enabled: true, value: 3 },
+        'complexity': { enabled: true, value: 4 },
+        'coverage': { enabled: true, value: -0.1 },
+      };
+      
+      // Apply the updated settings
+      const result = await makeApiRequest('PUT', orgRepoEndpoint, updatedSettings);
+      
+      console.log('✅ Commit quality gates updated successfully:');
+      Object.entries(result).forEach(([key, value]) => {
+        if (value && typeof value === 'object') {
+          console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}, value: ${value.value}`);
+        }
+      });
+      
+      return true;
+    }
+  } catch (error) {
+    console.error('❌ Failed to configure commit quality gates:', error.message);
+    
+    if (!CONFIG.ACCOUNT_TOKEN || !CONFIG.PROJECT_TOKEN) {
+      console.error('\n⚠️ Codacy tokens not found or invalid!');
+      console.error('Please ensure you have set up the following:');
+      console.error('1. Create a tools/.codacy-tokens file with:');
+      console.error('   export CODACY_ACCOUNT_TOKEN="your-account-token"');
+      console.error('   export CODACY_PROJECT_TOKEN="your-project-token"');
+      console.error('2. Or set these environment variables directly');
+    }
+    
+    return false;
+  }
+}
+
+// Main function
+async function main() {
+  console.log('🧊 ICE-WEBAPP Codacy Commit Quality Gates Setup');
+  console.log('=======================================');
+  
+  // Validate configuration
+  if (!CONFIG.ACCOUNT_TOKEN) {
+    console.error('❌ Missing CODACY_ACCOUNT_TOKEN. Please set it in your environment or tools/.codacy-tokens file.');
+    process.exit(1);
+  }
+  
+  if (!CONFIG.PROJECT_TOKEN) {
+    console.error('❌ Missing CODACY_PROJECT_TOKEN. Please set it in your environment or tools/.codacy-tokens file.');
+    process.exit(1);
+  }
+  
+  try {
+    const success = await configureCommitQualityGates();
+    if (success) {
+      console.log('\n✅ Commit quality gates configuration complete!');
+      console.log('Quality standards now enforced:');
+      console.log('- Zero tolerance for security issues');
+      console.log('- Maximum 2 new issues of Error severity');
+      console.log('- Reasonable limits on complexity and duplication');
+      console.log('- Allows minimal coverage drops to enable refactoring');
+      process.exit(0);
+    } else {
+      console.error('\n❌ Failed to configure commit quality gates.');
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('\n❌ An unexpected error occurred:', error.message);
+    process.exit(1);
+  }
+}
 
 // Run the script
-configureCommitQualityGates().catch(error => {
-  console.error('Error:', error.message);
-  process.exit(1);
-}); 
+main();

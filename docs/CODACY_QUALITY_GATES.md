@@ -186,10 +186,6 @@ SKIP_HOOKS=1 git push
 
 This ensures that all code pushed to the repository meets our quality standards while providing flexibility when needed.
 
-## Troubleshooting
-
-### Common Issues
-
 #### Permission Issues with Git Hooks
 
 If you encounter "permission denied" errors when Git tries to run hooks:
@@ -237,7 +233,14 @@ sudo chown -R $(whoami) tsconfig.tsbuildinfo
 
 # Fix permissions for Next.js
 sudo chown -R $(whoami) .next
+
+# Fix permissions for Husky hooks
+chmod +x .husky/*
 ```
+
+## Troubleshooting
+
+### Common Issues
 
 #### Coverage Report Not Found
 
