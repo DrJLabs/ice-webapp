@@ -113,6 +113,28 @@ The Codacy quality gates are automatically configured in our GitHub Actions work
     pnpm run codacy:setup-all
 ```
 
+### Branching Strategy
+
+For all quality gate changes, follow the ICE-WEBAPP branching strategy:
+
+1. Create a new branch with the `ice/` prefix:
+   ```bash
+   git checkout -b ice/quality-gate-feature
+   ```
+
+2. Make your changes and commit them:
+   ```bash
+   git add .
+   git commit -m "feat: descriptive commit message"
+   ```
+
+3. Push the branch with upstream tracking:
+   ```bash
+   git push -u origin ice/quality-gate-feature
+   ```
+
+4. Create a pull request for review before merging to main.
+
 ### Git Hooks
 
 We use Husky to enforce quality gates locally before commits and pushes:
