@@ -1,29 +1,67 @@
+#!/usr/bin/env sh
 # Husky pre-commit hook
+# To bypass this hook: git commit --no-verify
+
+# Check if this is a special commit that should bypass hooks
+if [ "$SKIP_HOOKS" = "1" ] || [ "$SKIP_PRE_COMMIT" = "1" ]; then
+  echo "🧊 Skipping ICE-WEBAPP quality gates (SKIP_HOOKS=1 or SKIP_PRE_COMMIT=1)"
+  exit 0
+fi
 
 echo "🧊 Running ICE-WEBAPP quality gates..."
 
+# Function to check for permission issues
+check_permissions() {
+  local dir="$1"
+  if [ -d "$dir" ] && ! [ -w "$dir" ]; then
+    echo "⚠️ Permission issue detected with directory: $dir"
+    echo "   Try running: sudo chown -R $(whoami) $dir"
+    return 1
+  fi
+  return 0
+}
+
 # 1. TypeScript validation
-echo "Checking TypeScript... (temporarily skipped)"
-# pnpm run type-check || { echo "❌ TypeScript check failed!"; exit 1; }
+echo "Checking TypeScript..."
+check_permissions "$(pwd)" || { 
+  echo "⚠️ Permission issues detected. To bypass this check, use: git commit --no-verify"
+  echo "   Or set environment variable: SKIP_PRE_COMMIT=1 git commit"
+  exit 1
+}
+pnpm run type-check || { echo "❌ TypeScript check failed!"; exit 1; }
 
 # 2. Linting
-echo "Running linter... (temporarily skipped)"
-# pnpm run lint || { echo "❌ Linting failed!"; exit 1; }
+echo "Running linter..."
+check_permissions "$(pwd)/.next" || {
+  echo "⚠️ Permission issues detected. To bypass this check, use: git commit --no-verify"
+  echo "   Or set environment variable: SKIP_PRE_COMMIT=1 git commit"
+  exit 1
+}
+pnpm run lint || { echo "❌ Linting failed!"; exit 1; }
 
 # 3. Tests with coverage
-echo "Running tests with coverage... (temporarily skipped)"
-# pnpm run test:coverage || { echo "❌ Tests failed!"; exit 1; }
+echo "Running tests with coverage..."
+pnpm run test:coverage || { echo "❌ Tests failed!"; exit 1; }
 
 # 4. Security scan with Codacy
 if [ -f "./tools/codacy-runtime.sh" ]; then
-  echo "Running security scan... (temporarily skipped)"
-  # CODACY_PROJECT_TOKEN=$(grep CODACY_PROJECT_TOKEN tools/.codacy-tokens | cut -d'"' -f2)
-  # export CODACY_PROJECT_TOKEN
-  # ./tools/codacy-runtime.sh || { echo "❌ Security scan failed!"; exit 1; }
+  echo "Running security scan..."
+  # Extract Codacy token from config file if it exists
+  if [ -f "tools/.codacy-tokens" ]; then
+    CODACY_PROJECT_TOKEN=$(grep CODACY_PROJECT_TOKEN tools/.codacy-tokens | cut -d'"' -f2)
+    export CODACY_PROJECT_TOKEN
+    ./tools/codacy-runtime.sh || { echo "❌ Security scan failed!"; exit 1; }
+  else
+    echo "⚠️ Codacy token file not found. Skipping security scan."
+  fi
 fi
 
 # 5. Upload coverage to Codacy
-echo "Uploading coverage to Codacy... (temporarily skipped)"
-# pnpm run coverage:upload || { echo "⚠️ Coverage upload failed, but continuing..."; }
+echo "Uploading coverage to Codacy..."
+if [ -f "coverage/lcov.info" ]; then
+  pnpm run coverage:upload || { echo "⚠️ Coverage upload failed, but continuing..."; }
+else
+  echo "⚠️ No coverage report found. Skipping upload."
+fi
 
 echo "✅ All quality gates passed!"
