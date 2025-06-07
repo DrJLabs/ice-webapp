@@ -1,5 +1,5 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/bin/sh
+# husky v10 format - no longer using the husky.sh approach
 
 # Skip post-commit hook if SKIP_POST_COMMIT or SKIP_HOOKS is set
 if [ -n "$SKIP_POST_COMMIT" ] || [ -n "$SKIP_HOOKS" ]; then
@@ -16,7 +16,7 @@ pnpm run test:coverage || { echo "❌ Test coverage generation failed"; exit 1; 
 # Source Codacy tokens
 if [ -f "./tools/.codacy-tokens" ]; then
   echo "🔑 Loading Codacy tokens..."
-  . ./tools/.codacy-tokens
+  source ./tools/.codacy-tokens
 else
   echo "❌ Codacy tokens not found. Skipping Codacy operations."
   exit 0

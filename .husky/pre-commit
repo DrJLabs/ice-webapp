@@ -1,1 +1,28 @@
-pnpm test
+#!/bin/sh
+# husky v10 format - no longer using the husky.sh approach
+
+# Skip pre-commit hook if SKIP_PRE_COMMIT or SKIP_HOOKS is set
+if [ -n "$SKIP_PRE_COMMIT" ] || [ -n "$SKIP_HOOKS" ]; then
+  echo "⚠️ Skipping pre-commit hook (SKIP_PRE_COMMIT or SKIP_HOOKS is set)"
+  exit 0
+fi
+
+echo "🧊 Running pre-commit quality gates..."
+
+# Type checking
+echo "📋 Running TypeScript validation..."
+pnpm run type-check || { echo "❌ TypeScript validation failed"; exit 1; }
+
+# Linting
+echo "🔍 Running linting checks..."
+pnpm run lint || { echo "❌ Linting failed"; exit 1; }
+
+# Tests
+echo "🧪 Running tests..."
+pnpm run test --run || { echo "❌ Tests failed"; exit 1; }
+
+# Security scan with Codacy
+echo "🔒 Running security scan..."
+./tools/codacy-runtime.sh || { echo "❌ Security scan failed"; exit 1; }
+
+echo "✅ All pre-commit checks passed!"
