@@ -126,6 +126,17 @@ The pre-commit hook runs the following quality gates:
 - Security scan with Codacy
 - Coverage upload to Codacy
 
+To bypass the pre-commit hook in exceptional cases:
+```bash
+# Using the --no-verify flag
+git commit --no-verify -m "Your commit message"
+
+# Using environment variables
+SKIP_PRE_COMMIT=1 git commit -m "Your commit message"
+# or
+SKIP_HOOKS=1 git commit -m "Your commit message"
+```
+
 #### Pre-push Hook
 
 The pre-push hook enforces minimum test coverage thresholds:
@@ -134,7 +145,62 @@ The pre-push hook enforces minimum test coverage thresholds:
 - Functions coverage: 65%
 - Branches coverage: 60%
 
-This ensures that all code pushed to the repository meets our quality standards.
+To bypass the pre-push hook in exceptional cases:
+```bash
+# Using the --no-verify flag
+git push --no-verify
+
+# Using environment variables
+SKIP_PRE_PUSH=1 git push
+# or
+SKIP_HOOKS=1 git push
+```
+
+> **Note**: The bypass mechanisms should only be used in exceptional circumstances, such as:
+> - When dealing with permission issues in the development environment
+> - During experimental or exploratory development phases
+> - When making documentation-only changes that don't affect code quality
+> - In emergency hotfix situations where time is critical
+
+This ensures that all code pushed to the repository meets our quality standards while providing flexibility when needed.
+
+## Troubleshooting
+
+### Common Issues
+
+#### Permission Issues
+
+If you encounter permission errors when running the hooks:
+
+```bash
+# Fix permissions for TypeScript
+sudo chown -R $(whoami) tsconfig.tsbuildinfo
+
+# Fix permissions for Next.js
+sudo chown -R $(whoami) .next
+
+# Fix permissions for Husky hooks
+chmod +x .husky/*
+```
+
+#### Coverage Report Not Found
+
+If the coverage report is not being generated:
+
+1. Make sure the tests are running with the `--coverage` flag
+2. Check that the `coverage` directory is not in `.gitignore`
+3. Try running `pnpm run test:coverage` manually to see the output
+
+#### Tests Failing in Hooks but Passing Manually
+
+This could be due to environment variables not being available in the hook context. Try:
+
+```bash
+# Run with environment variables
+ENV_VAR=value git commit
+```
+
+Or modify the hook to source your environment variables.
 
 ## Best Practices
 
@@ -142,10 +208,12 @@ This ensures that all code pushed to the repository meets our quality standards.
 - **Security First**: Never compromise on security-related quality gates
 - **Coverage Balance**: Set reasonable coverage requirements (70-80% is a good target)
 - **Team Alignment**: Ensure your team understands the quality standards
+- **Bypass Sparingly**: Use hook bypass mechanisms only when absolutely necessary
+- **Document Exceptions**: When bypassing hooks, document the reason in your commit message
 
-## Troubleshooting
+## Additional Support
 
-If you encounter issues:
+If you encounter other issues:
 
 - Verify your Codacy tokens have sufficient permissions
 - Check that your repository exists in Codacy
