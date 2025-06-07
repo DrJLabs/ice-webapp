@@ -13,7 +13,7 @@ This guide provides comprehensive instructions for using ICE-WEBAPP with OpenAI'
 **Use the specialized Codex setup script that leverages pre-installed packages:**
 
 ```bash
-# Optimized for Codex pre-installed packages (Node.js 20, Python 3.12, etc.)
+# Optimized for Codex pre-installed packages (Node.js 22, Python 3.12, etc.)
 curl -fsSL https://raw.githubusercontent.com/DrJLabs/ice-webapp/main/setup-codex.sh | bash
 ```
 

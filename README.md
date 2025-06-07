@@ -274,10 +274,11 @@ pnpm run test:a11y     # Accessibility tests
 
 ### Available Guides
 - [AI Prompts Collection](ai/prompts/development-prompts.md)
-- [Component Guidelines](docs/components.md)
-- [Testing Strategies](docs/testing.md)
-- [Performance Guide](docs/performance.md)
-- [Deployment Guide](docs/deployment.md)
+- [Codex Integration Guide](CODEX_GUIDE.md)
+- [Codacy & Cursor Integration](docs/CODACY_CURSOR_INTEGRATION.md)
+- [Codacy Quality Gates](docs/CODACY_QUALITY_GATES.md)
+- [Codacy Fix Summary](docs/CODACY_FIX_SUMMARY.md)
+- [Deployment Guide](DEPLOYMENT.md)
 
 ## 🤝 Contributing
 
