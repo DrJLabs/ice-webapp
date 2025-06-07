@@ -1,0 +1,1 @@
+# Codacy Quality Gates Configuration
