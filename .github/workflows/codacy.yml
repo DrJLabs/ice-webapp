@@ -52,6 +52,13 @@ jobs:
           CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
+      # Configure Codacy Quality Gates
+      - name: Configure Codacy Quality Gates
+        run: pnpm run codacy:setup-all
+        env:
+          CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
       # Run analysis – upload SARIF back to Codacy
       - name: Codacy Static Analysis
         uses: codacy/codacy-analysis-cli-action@master

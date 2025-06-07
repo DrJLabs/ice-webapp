@@ -1,0 +1,49 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Skip pre-push hook if SKIP_PRE_PUSH or SKIP_HOOKS is set
+if [ -n "$SKIP_PRE_PUSH" ] || [ -n "$SKIP_HOOKS" ]; then
+  echo "⚠️ Skipping pre-push hook (SKIP_PRE_PUSH or SKIP_HOOKS is set)"
+  exit 0
+fi
+
+echo "🧊 Running pre-push quality gates..."
+
+# Run tests with coverage
+echo "📊 Checking test coverage thresholds..."
+pnpm run test --coverage --run
+
+# Verify coverage meets minimum thresholds
+if grep -q '"lines":[0-9]\{1,2\}\.' coverage/coverage-summary.json; then
+  LINES_COVERAGE=$(grep -o '"lines":[0-9]\{1,2\}\.[0-9]\{1,2\}' coverage/coverage-summary.json | grep -o '[0-9]\{1,2\}\.[0-9]\{1,2\}')
+  STATEMENTS_COVERAGE=$(grep -o '"statements":[0-9]\{1,2\}\.[0-9]\{1,2\}' coverage/coverage-summary.json | grep -o '[0-9]\{1,2\}\.[0-9]\{1,2\}')
+  FUNCTIONS_COVERAGE=$(grep -o '"functions":[0-9]\{1,2\}\.[0-9]\{1,2\}' coverage/coverage-summary.json | grep -o '[0-9]\{1,2\}\.[0-9]\{1,2\}')
+  BRANCHES_COVERAGE=$(grep -o '"branches":[0-9]\{1,2\}\.[0-9]\{1,2\}' coverage/coverage-summary.json | grep -o '[0-9]\{1,2\}\.[0-9]\{1,2\}')
+  
+  echo "📈 Coverage: Lines: ${LINES_COVERAGE}%, Statements: ${STATEMENTS_COVERAGE}%, Functions: ${FUNCTIONS_COVERAGE}%, Branches: ${BRANCHES_COVERAGE}%"
+  
+  # Check against thresholds
+  if (( $(echo "$LINES_COVERAGE < 70" | bc -l) )); then
+    echo "❌ Line coverage below 70% threshold: ${LINES_COVERAGE}%"
+    exit 1
+  fi
+  
+  if (( $(echo "$STATEMENTS_COVERAGE < 70" | bc -l) )); then
+    echo "❌ Statement coverage below 70% threshold: ${STATEMENTS_COVERAGE}%"
+    exit 1
+  fi
+  
+  if (( $(echo "$FUNCTIONS_COVERAGE < 65" | bc -l) )); then
+    echo "❌ Function coverage below 65% threshold: ${FUNCTIONS_COVERAGE}%"
+    exit 1
+  fi
+  
+  if (( $(echo "$BRANCHES_COVERAGE < 60" | bc -l) )); then
+    echo "❌ Branch coverage below 60% threshold: ${BRANCHES_COVERAGE}%"
+    exit 1
+  fi
+else
+  echo "⚠️ Could not find coverage report. Skipping coverage check."
+fi
+
+echo "✅ All pre-push checks passed!" 
