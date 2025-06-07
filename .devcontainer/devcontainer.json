@@ -1,88 +1,20 @@
 {
-  "name": "ICE-WEBAPP Codex Universal",
-  "image": "ghcr.io/openai/codex-universal:latest",
-  
-  "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": true,
-      "installOhMyZsh": true,
-      "upgradePackages": true,
-      "username": "vscode",
-      "uid": "1000",
-      "gid": "1000"
-    }
-  },
-
-  "containerEnv": {
-    "CODEX_ENV_PYTHON_VERSION": "3.12",
-    "CODEX_ENV_NODE_VERSION": "22",
-    "CONTAINER": "docker",
-    "CODESPACE_NAME": "codex",
-    "OPENAI_CODEX": "true",
-    "SHELL": "/bin/bash"
-  },
-
-  "mounts": [
-    "source=${localWorkspaceFolder},target=/workspace/ice-webapp,type=bind,consistency=cached",
-    "source=${localWorkspaceFolder}/tests,target=/workspace/tests,type=bind,consistency=cached",
-    "source=${localWorkspaceFolder}/tools,target=/workspace/tools,type=bind,consistency=cached"
+  "name": "codex-env",
+  "build": { "dockerfile": "Dockerfile" },
+  "runArgs": [
+    "--cpus=2",
+    "--memory=2g",
+    "-e", "CODEX_ENV_PYTHON_VERSION=3.12",
+    "-e", "CODEX_ENV_NODE_VERSION=20",
+    "-e", "CODEX_ENV_RUST_VERSION=1.87.0",
+    "-e", "CODEX_ENV_GO_VERSION=1.23.8"
   ],
-
-  "workspaceFolder": "/workspace/ice-webapp",
-
-  "onCreateCommand": [
-    "bash", "-c", 
-    "source ~/.nvm/nvm.sh && nvm use 22 && echo 'Node.js setup complete: $(node --version)'"
-  ],
-
-  "postCreateCommand": [
-    "bash", "-c",
-    "source ~/.nvm/nvm.sh && nvm use 22 && cd /workspace/ice-webapp && bash setup-codex.sh"
-  ],
-
+  "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-vscode.vscode-typescript-next",
-        "bradlc.vscode-tailwindcss",
-        "esbenp.prettier-vscode",
-        "ms-vscode.vscode-eslint",
-        "ms-python.python",
-        "ms-vscode.vscode-json",
-        "ms-azuretools.vscode-docker",
-        "GitHub.copilot",
-        "GitHub.copilot-chat"
-      ],
-      "settings": {
-        "typescript.preferences.includePackageJsonAutoImports": "on",
-        "typescript.suggest.autoImports": true,
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "tailwindCSS.includeLanguages": {
-          "typescript": "javascript",
-          "typescriptreact": "javascript"
-        },
-        "files.associations": {
-          "*.css": "tailwindcss"
-        },
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "terminal.integrated.profiles.linux": {
-          "bash": {
-            "path": "/bin/bash",
-            "args": ["-c", "source ~/.nvm/nvm.sh && nvm use 22 && exec bash"]
-          }
-        }
-      }
+        "streetsidesoftware.code-spell-checker"
+      ]
     }
-  },
-
-  "forwardPorts": [3000, 3001, 8080],
-  "portsAttributes": {
-    "3000": {
-      "label": "Next.js Dev Server",
-      "onAutoForward": "notify"
-    }
-  },
-
-  "remoteUser": "root"
+  }
 } 
