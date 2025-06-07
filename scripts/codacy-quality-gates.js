@@ -9,7 +9,11 @@
  * 3. Reasonable code coverage requirements (minimum 70% diff coverage)
  * 4. Allow small coverage drops (-0.1%) to avoid blocking refactoring
  * 5. Limits on complexity and duplication
+ * 
+ * @global require, process, console, __dirname
  */
+
+/* eslint-env node */
 
 const fs = require('fs');
 const path = require('path');
@@ -35,7 +39,7 @@ function extractRepoInfoFromGit() {
     const gitConfigPath = path.join(process.cwd(), '.git', 'config');
     if (fs.existsSync(gitConfigPath)) {
       const gitConfig = fs.readFileSync(gitConfigPath, 'utf8');
-      const remoteUrlMatch = gitConfig.match(/url\s*=\s*(?:https:\/\/github\.com\/|git@github\.com:)([^\/]+)\/([^\.]+)(?:\.git)?/);
+      const remoteUrlMatch = gitConfig.match(/url\s*=\s*(?:https:\/\/github\.com\/|git@github\.com:)([^/]+)\/([^.]+)(?:\.git)?/);
       
       if (remoteUrlMatch && remoteUrlMatch.length >= 3) {
         CONFIG.ORGANIZATION = remoteUrlMatch[1];

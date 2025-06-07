@@ -10,7 +10,11 @@
  * 4. Limits on complexity and duplication
  * 
  * Note: diffCoverageThreshold is not available for commits, only for PRs
+ * 
+ * @global require, process, console, __dirname
  */
+
+/* eslint-env node */
 
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +40,7 @@ function extractRepoInfoFromGit() {
     const gitConfigPath = path.join(process.cwd(), '.git', 'config');
     if (fs.existsSync(gitConfigPath)) {
       const gitConfig = fs.readFileSync(gitConfigPath, 'utf8');
-      const remoteUrlMatch = gitConfig.match(/url\s*=\s*(?:https:\/\/github\.com\/|git@github\.com:)([^\/]+)\/([^\.]+)(?:\.git)?/);
+      const remoteUrlMatch = gitConfig.match(/url\s*=\s*(?:https:\/\/github\.com\/|git@github\.com:)([^/]+)\/([^.]+)(?:\.git)?/);
       
       if (remoteUrlMatch && remoteUrlMatch.length >= 3) {
         CONFIG.ORGANIZATION = remoteUrlMatch[1];
