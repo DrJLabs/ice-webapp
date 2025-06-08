@@ -2,9 +2,6 @@ import { test, expect } from '@playwright/test';
 import { HomePage } from './pages/HomePage';
 import { checkAccessibility, takeScreenshot, waitForStable } from './utils/test-helpers';
 
-// Run all tests in the same browser context for efficiency
-test.describe.configure({ mode: 'serial' });
-
 test.describe('Homepage', () => {
   // Setup common test context
   let homePage: HomePage;

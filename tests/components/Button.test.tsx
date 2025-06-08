@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, customRender } from '../test-utils';
-import { screen, fireEvent } from '@testing-library/react';
+import { render } from '../test-utils';
+import { vi, describe, it, expect } from 'vitest';
 import { testA11y } from '../test-utils';
 
 // Assuming a Button component exists in the codebase
@@ -8,28 +8,28 @@ import { testA11y } from '../test-utils';
 describe('Button Component', () => {
   // Basic rendering test
   it('renders correctly', () => {
-    render(<button>Click me</button>);
-    const buttonElement = screen.getByText('Click me');
-    expect(buttonElement).toBeInTheDocument();
+    const { getByText } = render(<button>Click me</button>);
+    const buttonElement = getByText('Click me');
+    expect(buttonElement).toBeDefined();
   });
 
   // Event handler test
   it('calls onClick handler when clicked', () => {
-    const handleClick = jest.fn();
-    render(<button onClick={handleClick}>Click me</button>);
+    const handleClick = vi.fn();
+    const { getByText } = render(<button onClick={handleClick}>Click me</button>);
     
-    const buttonElement = screen.getByText('Click me');
-    fireEvent.click(buttonElement);
+    const buttonElement = getByText('Click me');
+    buttonElement.click();
     
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
   // Disabled state test
   it('is disabled when disabled prop is true', () => {
-    render(<button disabled>Click me</button>);
+    const { getByText } = render(<button disabled>Click me</button>);
     
-    const buttonElement = screen.getByText('Click me');
-    expect(buttonElement).toBeDisabled();
+    const buttonElement = getByText('Click me');
+    expect(buttonElement.hasAttribute('disabled')).toBeTruthy();
   });
 
   // Accessibility test
