@@ -16,7 +16,7 @@ pnpm run test:coverage || { echo "❌ Test coverage generation failed"; exit 1; 
 # Source Codacy tokens
 if [ -f "./tools/.codacy-tokens" ]; then
   echo "🔑 Loading Codacy tokens..."
-  source ./tools/.codacy-tokens
+  . ./tools/.codacy-tokens
 else
   echo "❌ Codacy tokens not found. Skipping Codacy operations."
   exit 0
@@ -25,7 +25,7 @@ fi
 # Upload coverage to Codacy if tokens exist
 if [ -n "$CODACY_PROJECT_TOKEN" ]; then
   echo "📤 Uploading coverage to Codacy..."
-  bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage/lcov.info || { echo "❌ Coverage upload failed"; }
+  curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage.sh && bash codacy-coverage.sh report -r coverage/lcov.info || { echo "❌ Coverage upload failed"; }
   
   # Configure quality gates
   echo "⚙️ Configuring Codacy quality gates..."

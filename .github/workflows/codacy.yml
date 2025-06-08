@@ -3,9 +3,9 @@ name: Codacy Security and Quality Analysis
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   codacy-analysis:
