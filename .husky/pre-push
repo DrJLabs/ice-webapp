@@ -29,37 +29,54 @@ BRANCHES_THRESHOLD=60
 
 FAILED=0
 
-# Parse coverage values from vitest output
-LINES_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $2); print $2}')
-STATEMENTS_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $1); print $1}')
-FUNCTIONS_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $3); print $3}')
-BRANCHES_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $4); print $4}')
+# Use grep directly on the coverage output from Vitest, which prints a table like:
+# ----------|---------|----------|---------|---------|-------------------
+# File      | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+# ----------|---------|----------|---------|---------|-------------------
+# All files |    88.6 |    95.45 |   91.66 |    88.6 |                   
+# utils.ts  |    88.6 |    95.45 |   91.66 |    88.6 | 28-33,127-129     
+# ----------|---------|----------|---------|---------|-------------------
 
-# Function to compare coverage values
-check_threshold() {
-  coverage="$1"
-  threshold="$2"
-  name="$3"
+# Get the "All files" line from the coverage report
+COVERAGE_LINE=$(grep "All files" coverage/coverage-summary.json 2>/dev/null || 
+                grep -A1 "% Coverage report" -a "$(find . -name "stdout" -o -name "*.log" | tail -1)" 2>/dev/null | 
+                grep "All files" | head -1)
 
-  if [ -z "$coverage" ]; then
-    echo "⚠️ Could not determine $name coverage."
-    return 0
-  fi
+if [ -n "$COVERAGE_LINE" ]; then
+  # Extract coverage percentages
+  STATEMENTS_COVERAGE=$(echo "$COVERAGE_LINE" | awk '{print $2}' | tr -d '|,%')
+  BRANCHES_COVERAGE=$(echo "$COVERAGE_LINE" | awk '{print $3}' | tr -d '|,%')
+  FUNCTIONS_COVERAGE=$(echo "$COVERAGE_LINE" | awk '{print $4}' | tr -d '|,%')
+  LINES_COVERAGE=$(echo "$COVERAGE_LINE" | awk '{print $5}' | tr -d '|,%')
+  
+  # Function to compare coverage values
+  check_threshold() {
+    coverage="$1"
+    threshold="$2"
+    name="$3"
 
-  # Use awk for floating point comparison
-  if awk "BEGIN {exit !($coverage < $threshold)}"; then
-    echo "❌ $name coverage ($coverage%) is below threshold ($threshold%)"
-    FAILED=1
-  else
-    echo "✅ $name coverage: $coverage% (threshold: $threshold%)"
-  fi
-}
+    if [ -z "$coverage" ]; then
+      echo "⚠️ Could not determine $name coverage."
+      return 0
+    fi
 
-# Check all coverage metrics
-check_threshold "$LINES_COVERAGE" "$LINES_THRESHOLD" "Lines"
-check_threshold "$STATEMENTS_COVERAGE" "$STATEMENTS_THRESHOLD" "Statements"
-check_threshold "$FUNCTIONS_COVERAGE" "$FUNCTIONS_THRESHOLD" "Functions"
-check_threshold "$BRANCHES_COVERAGE" "$BRANCHES_THRESHOLD" "Branches"
+    # Use simple numeric comparison
+    if [ "$(echo "$coverage < $threshold" | bc -l)" = "1" ]; then
+      echo "❌ $name coverage ($coverage%) is below threshold ($threshold%)"
+      FAILED=1
+    else
+      echo "✅ $name coverage: $coverage% (threshold: $threshold%)"
+    fi
+  }
+
+  # Check all coverage metrics
+  check_threshold "$LINES_COVERAGE" "$LINES_THRESHOLD" "Lines"
+  check_threshold "$STATEMENTS_COVERAGE" "$STATEMENTS_THRESHOLD" "Statements"
+  check_threshold "$FUNCTIONS_COVERAGE" "$FUNCTIONS_THRESHOLD" "Functions"
+  check_threshold "$BRANCHES_COVERAGE" "$BRANCHES_THRESHOLD" "Branches"
+else
+  echo "⚠️ Could not find coverage data. Proceeding anyway."
+fi
 
 # 3. Upload coverage to Codacy
 echo "Uploading coverage to Codacy..."
