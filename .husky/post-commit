@@ -1,19 +1,12 @@
 #!/bin/sh
-# husky v10 format - no longer using the husky.sh approach
-
-# Skip post-commit hook if SKIP_POST_COMMIT or SKIP_HOOKS is set
-if [ -n "$SKIP_POST_COMMIT" ] || [ -n "$SKIP_HOOKS" ]; then
-  echo "⚠️ Skipping post-commit hook (SKIP_POST_COMMIT or SKIP_HOOKS is set)"
-  exit 0
-fi
 
 echo "🧊 Running post-commit quality gates..."
 
-# Generate coverage report
+# Generate test coverage report
 echo "📊 Generating test coverage report..."
-pnpm run test:coverage || { echo "❌ Test coverage generation failed"; exit 1; }
+pnpm run test:coverage
 
-# Source Codacy tokens
+# Load Codacy tokens if they exist
 if [ -f "./tools/.codacy-tokens" ]; then
   echo "🔑 Loading Codacy tokens..."
   . ./tools/.codacy-tokens
@@ -34,4 +27,4 @@ else
   echo "❌ Codacy project token not found. Skipping Codacy operations."
 fi
 
-echo "✅ Post-commit tasks completed" 
+echo "✅ Post-commit tasks completed"

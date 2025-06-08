@@ -1,0 +1,44 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: "High-level development workflow, including branching strategy and quality gate principles for the ICE-WEBAPP project. This rule is always active."
+globs: "**/*"
+AlwaysApply: true
+---
+# 🧊 General ICE-WEBAPP Workflow
+
+This document outlines the mandatory, high-level workflow for all development activities. More specific rules for coding, testing, and security will be applied automatically based on the files you are editing.
+
+## 🎯 Branching Strategy
+
+All work must be done in a feature branch. The AI will create branches with the following convention:
+
+-   **Format**: `cursor/[type]/[descriptive-name]`
+-   **`[type]`**: Can be `feature`, `fix`, `chore`, `refactor`, etc.
+-   **Example**: `cursor/feature/new-user-dashboard`
+
+This distinguishes AI-generated branches from any other development branches (e.g., `ice/*`).
+
+## ✅ Core Quality Gate Principles
+The following quality gates MUST be passed for any change. The specific commands and tools are defined in other, context-aware rules.
+
+1.  **Static Analysis**: Code must pass TypeScript compilation and ESLint checks without errors.
+2.  **Testing**: All existing and new tests must pass. New features require new tests.
+3.  **Codacy Analysis**: Code must be scanned and cleared by Codacy for quality and security issues.
+4.  **Dependency Security**: New or updated dependencies must be scanned for vulnerabilities with Trivy.
+
+## 🚀 Commit and Push Workflow
+
+1.  Ensure all quality gates have passed.
+2.  Commit changes with a descriptive message following the Conventional Commits specification.
+3.  Push the feature branch to the remote repository.
+
+## 🚨 Critical Requirements
+
+-   **Never** work directly on the `main` or `develop` branches.
+-   Always adhere to the quality gate principles.
+-   Proactively use the Codacy tools as specified in the relevant rules.
+-   Use the tokens provided in `tools/.codacy-tokens` for all Codacy operations.
