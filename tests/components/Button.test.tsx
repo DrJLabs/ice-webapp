@@ -37,12 +37,11 @@ describe('Button Component', () => {
     await testA11y(<button>Click me</button>);
   });
 
-  // Variant test (assuming the Button component has variants)
+  // Class name test
   it('applies the correct class for primary variant', () => {
-    // This is just an example - adjust based on your actual Button implementation
-    render(<button className="btn-primary">Primary Button</button>);
+    const { getByText } = render(<button className="btn-primary">Primary Button</button>);
     
-    const buttonElement = screen.getByText('Primary Button');
-    expect(buttonElement).toHaveClass('btn-primary');
+    const buttonElement = getByText('Primary Button');
+    expect(buttonElement.className).toContain('btn-primary');
   });
 }); 
