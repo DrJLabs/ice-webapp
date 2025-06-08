@@ -20,6 +20,7 @@
     "codacy:quality-gates": "node scripts/codacy-quality-gates.js",
     "codacy:commit-quality-gates": "node scripts/codacy-commit-quality-gates.js",
     "codacy:setup-all": "pnpm run codacy:quality-gates && pnpm run codacy:commit-quality-gates",
+    "codacy:cli:analyze": "codacy-analysis-cli analyze",
     "prepare": "husky"
   },
   "dependencies": {

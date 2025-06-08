@@ -1,10 +1,15 @@
 import React, { ReactElement } from 'react';
-import { render, RenderOptions as RTLRenderOptions } from '@testing-library/react';
+import { render, RenderOptions as RTLRenderOptions, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
 // Add custom jest matchers for accessibility testing
 expect.extend(toHaveNoViolations);
+
+// Define custom render options type
+type CustomRenderOptions = Parameters<typeof render>[1] & {
+  wrapper?: React.ComponentType<{ children: React.ReactNode }>;
+};
 
 /**
  * Custom render function with common providers
@@ -14,7 +19,7 @@ expect.extend(toHaveNoViolations);
  */
 function customRender(
   ui: ReactElement,
-  options?: Omit<RTLRenderOptions, 'wrapper'>
+  options?: Omit<CustomRenderOptions, 'wrapper'>
 ) {
   return render(ui, { ...options });
 }
@@ -50,11 +55,28 @@ function delay(ms: number) {
 // Re-export everything from testing-library
 export * from '@testing-library/react';
 
-// Override render method
+// Export custom functions
 export { 
   customRender as render,
   createUserEvent,
   checkAccessibility,
   delay,
-  axe
+  axe,
+  screen
 }; 
+
+/**
+ * Test component for accessibility violations
+ * @param ui - React component to test
+ * @param options - Render options
+ * @returns Promise that resolves when accessibility tests are complete
+ */
+export const testA11y = async (
+  ui: ReactElement,
+  options?: Omit<CustomRenderOptions, 'wrapper'>,
+) => {
+  const container = render(ui, options).container;
+  const results = await axe(container);
+  expect(results).toHaveNoViolations();
+  return results;
+};

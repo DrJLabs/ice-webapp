@@ -1,11 +1,30 @@
 #!/bin/sh
 
-echo "Running post-commit quality gates..."
+echo "🧊 Running post-commit quality gates..."
+
+# Generate test coverage report
+echo "📊 Generating test coverage report..."
+pnpm run test:coverage
 
 # Load Codacy tokens if they exist
 if [ -f "./tools/.codacy-tokens" ]; then
-  echo "Loading Codacy tokens..."
+  echo "🔑 Loading Codacy tokens..."
   . ./tools/.codacy-tokens
+else
+  echo "❌ Codacy tokens not found. Skipping Codacy operations."
+  exit 0
 fi
 
-echo "Post-commit tasks completed"
+# Upload coverage to Codacy if tokens exist
+if [ -n "$CODACY_PROJECT_TOKEN" ]; then
+  echo "📤 Uploading coverage to Codacy..."
+  curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage.sh && bash codacy-coverage.sh report -r coverage/lcov.info || { echo "❌ Coverage upload failed"; }
+  
+  # Configure quality gates
+  echo "⚙️ Configuring Codacy quality gates..."
+  pnpm run codacy:setup-all || { echo "⚠️ Quality gate configuration failed"; }
+else
+  echo "❌ Codacy project token not found. Skipping Codacy operations."
+fi
+
+echo "✅ Post-commit tasks completed"

@@ -4,11 +4,11 @@
  * Test Generator Script
  * 
  * This script generates test files for components and pages.
- * Usage: node scripts/generate-tests.js --type=component|page --name=ComponentName
+ * Usage: node scripts/generate-tests.js --type=component|page|e2e --name=ComponentName
  */
 
 /* eslint-env node */
-/* global process, require, console */
+/* global process, require, console, __dirname */
 
 const fs = require('fs');
 const path = require('path');
@@ -28,11 +28,12 @@ args.forEach(arg => {
 // Validate required parameters
 if (!params.type || !params.name) {
   console.error('Error: Missing required parameters');
-  console.log('Usage: node scripts/generate-tests.js --type=component|page --name=ComponentName');
+  console.log('Usage: node scripts/generate-tests.js --type=component|page|e2e --name=ComponentName');
   process.exit(1);
 }
 
 const { type, name } = params;
+const ROOT_DIR = path.resolve(__dirname, '..');
 
 // Templates
 const componentTestTemplate = `import React from 'react';
@@ -58,130 +59,188 @@ describe('${name} Component', () => {
 });
 `;
 
-const pageTestTemplate = `import { test, expect } from '@playwright/test';
+const pageTestTemplate = `import React from 'react';
+import { render, screen, checkAccessibility } from '../test-utils';
+import ${name}Page from '@/app/${name.toLowerCase()}/page';
+
+describe('${name} Page', () => {
+  it('renders correctly', () => {
+    render(<${name}Page />);
+    // Add assertions based on page structure
+  });
+
+  it('passes accessibility tests', async () => {
+    const { container } = render(<${name}Page />);
+    await checkAccessibility(container);
+  });
+
+  // Add more tests specific to this page
+});
+`;
+
+const e2eTestTemplate = `import { test, expect } from '@playwright/test';
 import { ${name}Page } from './pages/${name}Page';
 import { checkAccessibility, takeScreenshot } from './utils/test-helpers';
 
 test.describe('${name} Page Tests', () => {
-  test('should load the page correctly', async ({ page }) => {
-    const testPage = new ${name}Page(page);
-    await testPage.goto();
-    await testPage.waitForPageLoad();
+  test('should load successfully', async ({ page }) => {
+    // Arrange
+    const ${name.toLowerCase()}Page = new ${name}Page(page);
     
-    const title = await testPage.getTitle();
+    // Act
+    await ${name.toLowerCase()}Page.goto();
+    await ${name.toLowerCase()}Page.waitForPageLoad();
+    
+    // Assert
+    const title = await ${name.toLowerCase()}Page.getTitle();
     expect(title).toBeTruthy();
     
     // Take screenshot for visual reference
     await takeScreenshot(page, '${name.toLowerCase()}-loaded');
   });
   
-  test('should pass basic accessibility checks', async ({ page }) => {
-    const testPage = new ${name}Page(page);
-    await testPage.goto();
-    await testPage.waitForPageLoad();
+  test('should have proper content', async ({ page }) => {
+    // Arrange
+    const ${name.toLowerCase()}Page = new ${name}Page(page);
     
+    // Act
+    await ${name.toLowerCase()}Page.goto();
+    await ${name.toLowerCase()}Page.waitForPageLoad();
+    
+    // Assert
+    // Add assertions specific to this page
+    expect(await ${name.toLowerCase()}Page.verifyPage()).toBeTruthy();
+  });
+  
+  test('should pass basic accessibility checks', async ({ page }) => {
+    // Arrange
+    const ${name.toLowerCase()}Page = new ${name}Page(page);
+    
+    // Act
+    await ${name.toLowerCase()}Page.goto();
+    await ${name.toLowerCase()}Page.waitForPageLoad();
+    
+    // Assert - Check accessibility
     const accessibilitySnapshot = await checkAccessibility(page);
     expect(accessibilitySnapshot).toBeTruthy();
   });
 });
 `;
 
-const pageObjectTemplate = `import { Page, Locator, expect } from '@playwright/test';
+const pageObjectTemplate = `import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 /**
- * ${name} Page Object
+ * ${name} page object
  */
 export class ${name}Page extends BasePage {
-  // Add locators here
+  // Define page-specific locators
   readonly heading: Locator;
   readonly mainContent: Locator;
-
-  /**
-   * @param {Page} page - Playwright page
-   */
+  
   constructor(page: Page) {
+    // Update the URL path as needed
     super(page, '/${name.toLowerCase()}');
     
     // Initialize locators
-    this.heading = page.locator('h1');
-    this.mainContent = page.locator('main');
+    this.heading = this.page.locator('h1').first();
+    this.mainContent = this.page.locator('main');
   }
-
+  
   /**
-   * Override waitForPageLoad to provide more specific wait conditions
+   * Override waitForPageLoad to provide page-specific wait conditions
    */
   async waitForPageLoad() {
-    await this.heading.waitFor({ state: 'visible' });
-    await this.mainContent.waitFor({ state: 'visible' });
+    await super.waitForPageLoad();
+    try {
+      await this.heading.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+      await this.mainContent.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    } catch (error) {
+      // Continue even if elements aren't found
+    }
   }
-
+  
   /**
    * Verify the page is loaded correctly
    */
   async verifyPage() {
     await this.waitForPageLoad();
-    
-    const headingText = await this.getElementText(this.heading);
-    expect(headingText).toBeTruthy();
-    
-    const isMainContentVisible = await this.isElementVisible(this.mainContent);
-    expect(isMainContentVisible).toBeTruthy();
-    
-    return true;
+    const heading = await this.getElementText(this.heading);
+    return !!heading;
   }
-}`;
+  
+  // Add page-specific methods here
+}
+`;
 
-// Generate the test file
-function generateTest() {
-  let targetPath, content, pageObjectPath;
-  
-  if (type === 'component') {
-    targetPath = path.join(process.cwd(), 'tests', 'components', `${name}.test.tsx`);
-    content = componentTestTemplate;
-  } else if (type === 'page') {
-    targetPath = path.join(process.cwd(), 'tests', 'e2e', `${name.toLowerCase()}.test.ts`);
-    pageObjectPath = path.join(process.cwd(), 'tests', 'e2e', 'pages', `${name}Page.ts`);
-    content = pageTestTemplate;
-  } else {
-    console.error(`Error: Invalid type "${type}". Use "component" or "page".`);
-    process.exit(1);
-  }
-  
-  // Create directory if it doesn't exist
-  const directory = path.dirname(targetPath);
-  if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory, { recursive: true });
-  }
-  
-  // Write the test file
-  fs.writeFileSync(targetPath, content);
-  console.log(`Generated test file: ${targetPath}`);
-  
-  // Create page object if type is page
-  if (type === 'page' && pageObjectPath) {
-    const pageObjectDir = path.dirname(pageObjectPath);
-    if (!fs.existsSync(pageObjectDir)) {
-      fs.mkdirSync(pageObjectDir, { recursive: true });
-    }
-    
-    fs.writeFileSync(pageObjectPath, pageObjectTemplate);
-    console.log(`Generated page object: ${pageObjectPath}`);
-  }
-  
-  // Format the files
-  try {
-    if (fs.existsSync(targetPath)) {
-      execSync(`npx prettier --write "${targetPath}"`, { stdio: 'inherit' });
-    }
-    
-    if (pageObjectPath && fs.existsSync(pageObjectPath)) {
-      execSync(`npx prettier --write "${pageObjectPath}"`, { stdio: 'inherit' });
-    }
-  } catch (error) {
-    console.warn('Warning: Could not format files. Prettier might not be installed.');
+// Create directories if they don't exist
+function ensureDirectoryExists(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+    console.log(`Created directory: ${dirPath}`);
   }
 }
 
-// Execute
+// Generate the test file
+function generateTest() {
+  try {
+    let testPath, template, additionalPath;
+
+    switch (type.toLowerCase()) {
+      case 'component':
+        testPath = path.join(ROOT_DIR, 'tests', 'components', `${name}.test.tsx`);
+        template = componentTestTemplate;
+        break;
+      
+      case 'page':
+        testPath = path.join(ROOT_DIR, 'tests', 'pages', `${name}.test.tsx`);
+        template = pageTestTemplate;
+        break;
+      
+      case 'e2e':
+        testPath = path.join(ROOT_DIR, 'tests', 'e2e', `${name.toLowerCase()}.test.ts`);
+        template = e2eTestTemplate;
+
+        // Also create page object if it doesn't exist
+        additionalPath = path.join(ROOT_DIR, 'tests', 'e2e', 'pages', `${name}Page.ts`);
+        ensureDirectoryExists(path.dirname(additionalPath));
+        
+        if (!fs.existsSync(additionalPath)) {
+          fs.writeFileSync(additionalPath, pageObjectTemplate);
+          console.log(`Created page object: ${additionalPath}`);
+        } else {
+          console.log(`Page object already exists: ${additionalPath}`);
+        }
+        break;
+      
+      default:
+        console.error(`Unknown test type: ${type}`);
+        process.exit(1);
+    }
+
+    ensureDirectoryExists(path.dirname(testPath));
+
+    if (fs.existsSync(testPath)) {
+      console.error(`Test file already exists: ${testPath}`);
+      process.exit(1);
+    }
+
+    fs.writeFileSync(testPath, template);
+    console.log(`Created test file: ${testPath}`);
+
+    // Format the file with Prettier if available
+    try {
+      execSync(`npx prettier --write "${testPath}"`);
+      console.log(`Formatted test file with Prettier`);
+    } catch (error) {
+      console.log(`Note: Could not format with Prettier, continuing anyway`);
+    }
+
+  } catch (error) {
+    console.error('Error generating test file:', error);
+    process.exit(1);
+  }
+}
+
+// Execute the test generation
 generateTest(); 

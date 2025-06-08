@@ -1,5 +1,5 @@
 {
-  "extends": "next/core-web-vitals",
+  "extends": ["next/core-web-vitals", "eslint:recommended"],
   "overrides": [
     {
       "files": ["scripts/**/*.js"],
@@ -8,6 +8,13 @@
       },
       "rules": {
         "no-console": "off"
+      }
+    },
+    {
+      "files": ["*.test.js", "*.test.ts", "*.test.tsx"],
+      "env": {
+        "jest": true,
+        "node": true
       }
     }
   ]

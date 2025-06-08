@@ -1,10 +1,6 @@
 import React from 'react';
 import { render, screen, checkAccessibility, createUserEvent } from '../test-utils';
-import { vi } from 'vitest';
-
-// We'll be testing against a hypothetical Button component
-// This would be replaced with your actual component imports
-// import Button from '@/components/ui/Button';
+import { vi, expect } from 'vitest';
 
 // Mock component for testing purposes
 const Button = ({
@@ -37,23 +33,23 @@ describe('Button Component', () => {
     render(<Button>Click me</Button>);
     
     const button = screen.getByRole('button', { name: /click me/i });
-    expect(button).toBeInTheDocument();
-    expect(button).toHaveClass('btn');
-    expect(button).toHaveClass('btn-primary');
+    expect(button).toBeDefined();
+    expect(button.classList.contains('btn')).toBe(true);
+    expect(button.classList.contains('btn-primary')).toBe(true);
   });
   
   it('renders with correct variant class', () => {
     render(<Button variant="secondary">Secondary Button</Button>);
     
     const button = screen.getByRole('button', { name: /secondary button/i });
-    expect(button).toHaveClass('btn-secondary');
+    expect(button.classList.contains('btn-secondary')).toBe(true);
   });
   
   it('applies disabled attribute when disabled', () => {
     render(<Button disabled>Disabled Button</Button>);
     
     const button = screen.getByRole('button', { name: /disabled button/i });
-    expect(button).toBeDisabled();
+    expect(button.hasAttribute('disabled')).toBe(true);
   });
   
   it('calls onClick handler when clicked', async () => {
