@@ -15,19 +15,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.12.0'
-          cache: 'pnpm'
-
-      # Install pnpm
+      # Install pnpm first
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
 
       # Install dependencies
       - name: Install dependencies
@@ -45,86 +45,78 @@ jobs:
       - name: Run tests
         run: pnpm run test --coverage
 
-      # Runtime helper installs CLI + sets flag
+      # Prepare Codacy runtime
       - name: Prepare Codacy
         run: ./tools/codacy-runtime.sh
-        env:
-          CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
-      # Configure Codacy Quality Gates
+      # Configure Codacy quality gates
       - name: Configure Codacy Quality Gates
         run: pnpm run codacy:setup-all
-        env:
-          CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
-      # Run analysis – upload SARIF back to Codacy
+      # Run Codacy Analysis
       - name: Codacy Static Analysis
         uses: codacy/codacy-analysis-cli-action@master
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          api-token: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
-          upload: true
-          output: codacy.sarif
+          verbose: true
+          output: results.sarif
           format: sarif
-          # Do not fail the build based on issues, let Codacy's PR status checks handle it
-          max-allowed-issues: 2147483647
+          gh-code-scanning-compat: true
+          max-allowed-issues: 0
 
+      # Upload SARIF file
       - name: Upload Codacy SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v2
         with:
-          sarif_file: codacy.sarif
+          sarif_file: results.sarif
 
-      # Configure Codacy Quality Gates
+      # Setup code coverage report upload
       - name: Configure Codacy Quality Gates
-        run: pnpm run codacy:setup-all
-        env:
-          CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        run: pnpm run codacy:setup-coverage
 
-      # Upload test coverage
+      # Upload coverage report
       - name: Upload coverage
-        uses: codacy/codacy-coverage-reporter-action@v1
-        with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          coverage-reports: coverage/lcov.info
+        run: pnpm run coverage:upload
 
   security:
+    name: security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.12.0'
-          cache: 'pnpm'
-
-      # Install pnpm
+      # Install pnpm first
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
 
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       # Security audit
       - name: Security audit
-        run: pnpm audit --audit-level moderate
+        run: pnpm audit
 
-      # Dependency vulnerabilities check with Trivy
+      # Run Trivy vulnerability scanner
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
 
-      # Upload Trivy results to GitHub Security tab
+      # Upload Trivy scan results to GitHub Security tab
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif' 
