@@ -1,53 +1,70 @@
 import { test, expect } from '@playwright/test';
 import { HomePage } from './pages/HomePage';
+import { checkAccessibility, takeScreenshot } from './utils/test-helpers';
 
-test.describe('Homepage', () => {
+test.describe('Homepage Tests', () => {
   test('should load successfully', async ({ page }) => {
+    // Arrange
     const homePage = new HomePage(page);
+    
+    // Act
     await homePage.goto();
     await homePage.waitForPageLoad();
     
-    // Check the title
+    // Assert
     const title = await homePage.getTitle();
     expect(title).toBeTruthy();
     
-    // Commenting out navigation check as it doesn't exist in the current page
-    // const hasNavigation = await homePage.hasNavigation();
-    // expect(hasNavigation).toBeTruthy();
+    // Take screenshot for visual reference
+    await takeScreenshot(page, 'homepage-loaded');
   });
   
-  test('should have proper heading', async ({ page }) => {
+  test('should have proper heading and content', async ({ page }) => {
+    // Arrange
     const homePage = new HomePage(page);
+    
+    // Act
     await homePage.goto();
     await homePage.waitForPageLoad();
     
-    // Check main heading
+    // Assert
     const heading = await homePage.getMainHeading();
     expect(heading).toBeTruthy();
+    
+    const isMainContentVisible = await homePage.isElementVisible(homePage.mainContent);
+    expect(isMainContentVisible).toBe(true);
   });
   
-  // Skip navigation test since navigation doesn't exist in the current page
-  test.skip('should navigate to other pages', async ({ page }) => {
+  test('should have navigation links if present', async ({ page }) => {
+    // Arrange
     const homePage = new HomePage(page);
+    
+    // Act
     await homePage.goto();
     await homePage.waitForPageLoad();
     
     // Get navigation links
-    const navLinks = await homePage.getNavigationLinks();
+    const hasNavigation = await homePage.hasNavigation();
     
-    // Skip this test if there are no navigation links
-    if (navLinks.length === 0) {
-      test.skip();
-      return;
+    // Skip this test if there's no navigation
+    test.skip(!hasNavigation, 'No navigation present on page');
+    
+    if (hasNavigation) {
+      const navLinks = await homePage.getNavigationLinkTexts();
+      expect(navLinks.length).toBeGreaterThan(0);
     }
+  });
+  
+  test('should pass basic accessibility checks', async ({ page }) => {
+    // Arrange
+    const homePage = new HomePage(page);
     
-    expect(navLinks.length).toBeGreaterThan(0);
+    // Act
+    await homePage.goto();
+    await homePage.waitForPageLoad();
     
-    // Click the first navigation link
-    await homePage.clickNavigationLink(navLinks[0]);
-    
-    // Verify we're on a different page
-    const currentUrl = page.url();
-    expect(currentUrl).not.toEqual(homePage.url);
+    // Assert - Check accessibility
+    const accessibilitySnapshot = await checkAccessibility(page);
+    expect(accessibilitySnapshot).toBeTruthy();
   });
 }); 

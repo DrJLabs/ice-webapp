@@ -1,115 +1,174 @@
 #!/usr/bin/env node
 
-/* eslint-env node */
-
 /**
  * Test Generator Script
  * 
- * Generates test files for components and pages
- * Usage:
- *   - Generate component test:
- *     node scripts/generate-tests.js component ComponentName
- *   - Generate page test:
- *     node scripts/generate-tests.js page PageName
- *   - Generate e2e test:
- *     node scripts/generate-tests.js e2e pageName
+ * This script generates test files for components and pages.
+ * Usage: node scripts/generate-tests.js --type=component|page|e2e --name=ComponentName
  */
+
+/* eslint-env node */
+/* global process, require, console, __dirname */
 
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { execSync } = require('child_process');
 
-// Get arguments
-const [, , type, name] = process.argv;
+// Parse command line arguments
+const args = process.argv.slice(2);
+const params = {};
 
-if (!type || !name) {
-  console.error('Please provide a type (component, page, e2e) and name');
-  console.error('Example: node scripts/generate-tests.js component Button');
+args.forEach(arg => {
+  const [key, value] = arg.split('=');
+  if (key && value) {
+    params[key.replace(/^--/, '')] = value;
+  }
+});
+
+// Validate required parameters
+if (!params.type || !params.name) {
+  console.error('Error: Missing required parameters');
+  console.log('Usage: node scripts/generate-tests.js --type=component|page|e2e --name=ComponentName');
   process.exit(1);
 }
 
+const { type, name } = params;
 const ROOT_DIR = path.resolve(__dirname, '..');
 
 // Templates
-const componentTestTemplate = (componentName) => `import React from 'react';
-import { render, screen, fireEvent, testA11y } from '../test-utils';
-import { ${componentName} } from '@/components/${componentName.toLowerCase()}/${componentName}';
+const componentTestTemplate = `import React from 'react';
+import { render, screen, checkAccessibility, createUserEvent } from '../test-utils';
+import ${name} from '@/components/${name}';
 
-describe('${componentName} Component', () => {
+describe('${name} Component', () => {
   it('renders correctly', () => {
-    render(<${componentName} />);
-    // Add assertions based on component structure
+    render(<${name} />);
+    // Add your assertions here
   });
-
-  it('has no accessibility violations', async () => {
-    await testA11y(<${componentName} />);
+  
+  it('handles user interactions', async () => {
+    const user = createUserEvent();
+    render(<${name} />);
+    // Add your interaction tests here
   });
-
-  // Add more tests specific to this component
+  
+  it('passes accessibility tests', async () => {
+    const { container } = render(<${name} />);
+    await checkAccessibility(container);
+  });
 });
 `;
 
-const pageTestTemplate = (pageName) => `import React from 'react';
-import { render, screen, testA11y } from '../test-utils';
-import ${pageName} from '@/app/${pageName.toLowerCase()}/page';
+const pageTestTemplate = `import React from 'react';
+import { render, screen, checkAccessibility } from '../test-utils';
+import ${name}Page from '@/app/${name.toLowerCase()}/page';
 
-describe('${pageName} Page', () => {
+describe('${name} Page', () => {
   it('renders correctly', () => {
-    render(<${pageName} />);
+    render(<${name}Page />);
     // Add assertions based on page structure
   });
 
-  it('has no accessibility violations', async () => {
-    await testA11y(<${pageName} />);
+  it('passes accessibility tests', async () => {
+    const { container } = render(<${name}Page />);
+    await checkAccessibility(container);
   });
 
   // Add more tests specific to this page
 });
 `;
 
-const e2eTestTemplate = (pageName) => `import { test, expect } from '@playwright/test';
-import { ${pageName}Page } from './pages/${pageName}Page';
+const e2eTestTemplate = `import { test, expect } from '@playwright/test';
+import { ${name}Page } from './pages/${name}Page';
 import { checkAccessibility, takeScreenshot } from './utils/test-helpers';
 
-test.describe('${pageName} Page', () => {
-  test('should load successfully', async ({ page }, testInfo) => {
-    const ${pageName.toLowerCase()}Page = new ${pageName}Page(page);
-    await ${pageName.toLowerCase()}Page.goto();
-    await ${pageName.toLowerCase()}Page.waitForPageLoad();
+test.describe('${name} Page Tests', () => {
+  test('should load successfully', async ({ page }) => {
+    // Arrange
+    const ${name.toLowerCase()}Page = new ${name}Page(page);
     
-    // Take a screenshot
-    await takeScreenshot(page, testInfo);
+    // Act
+    await ${name.toLowerCase()}Page.goto();
+    await ${name.toLowerCase()}Page.waitForPageLoad();
     
-    // Check the title
-    const title = await ${pageName.toLowerCase()}Page.getTitle();
+    // Assert
+    const title = await ${name.toLowerCase()}Page.getTitle();
     expect(title).toBeTruthy();
+    
+    // Take screenshot for visual reference
+    await takeScreenshot(page, '${name.toLowerCase()}-loaded');
   });
   
-  test('should pass accessibility tests', async ({ page }, testInfo) => {
-    const ${pageName.toLowerCase()}Page = new ${pageName}Page(page);
-    await ${pageName.toLowerCase()}Page.goto();
-    await ${pageName.toLowerCase()}Page.waitForPageLoad();
+  test('should have proper content', async ({ page }) => {
+    // Arrange
+    const ${name.toLowerCase()}Page = new ${name}Page(page);
     
-    // Run accessibility tests
-    await checkAccessibility(page, testInfo);
+    // Act
+    await ${name.toLowerCase()}Page.goto();
+    await ${name.toLowerCase()}Page.waitForPageLoad();
+    
+    // Assert
+    // Add assertions specific to this page
+    expect(await ${name.toLowerCase()}Page.verifyPage()).toBeTruthy();
   });
-
-  // Add more tests specific to this page
+  
+  test('should pass basic accessibility checks', async ({ page }) => {
+    // Arrange
+    const ${name.toLowerCase()}Page = new ${name}Page(page);
+    
+    // Act
+    await ${name.toLowerCase()}Page.goto();
+    await ${name.toLowerCase()}Page.waitForPageLoad();
+    
+    // Assert - Check accessibility
+    const accessibilitySnapshot = await checkAccessibility(page);
+    expect(accessibilitySnapshot).toBeTruthy();
+  });
 });
 `;
 
-const pageObjectTemplate = (pageName) => `import { Page } from '@playwright/test';
+const pageObjectTemplate = `import { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 /**
- * ${pageName} page object
+ * ${name} page object
  */
-export class ${pageName}Page extends BasePage {
+export class ${name}Page extends BasePage {
+  // Define page-specific locators
+  readonly heading: Locator;
+  readonly mainContent: Locator;
+  
   constructor(page: Page) {
     // Update the URL path as needed
-    super(page, '/${pageName.toLowerCase()}');
+    super(page, '/${name.toLowerCase()}');
+    
+    // Initialize locators
+    this.heading = this.page.locator('h1').first();
+    this.mainContent = this.page.locator('main');
   }
-
+  
+  /**
+   * Override waitForPageLoad to provide page-specific wait conditions
+   */
+  async waitForPageLoad() {
+    await super.waitForPageLoad();
+    try {
+      await this.heading.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+      await this.mainContent.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    } catch (error) {
+      // Continue even if elements aren't found
+    }
+  }
+  
+  /**
+   * Verify the page is loaded correctly
+   */
+  async verifyPage() {
+    await this.waitForPageLoad();
+    const heading = await this.getElementText(this.heading);
+    return !!heading;
+  }
+  
   // Add page-specific methods here
 }
 `;
@@ -130,24 +189,24 @@ function generateTest() {
     switch (type.toLowerCase()) {
       case 'component':
         testPath = path.join(ROOT_DIR, 'tests', 'components', `${name}.test.tsx`);
-        template = componentTestTemplate(name);
+        template = componentTestTemplate;
         break;
       
       case 'page':
         testPath = path.join(ROOT_DIR, 'tests', 'pages', `${name}.test.tsx`);
-        template = pageTestTemplate(name);
+        template = pageTestTemplate;
         break;
       
       case 'e2e':
         testPath = path.join(ROOT_DIR, 'tests', 'e2e', `${name.toLowerCase()}.test.ts`);
-        template = e2eTestTemplate(name);
+        template = e2eTestTemplate;
 
         // Also create page object if it doesn't exist
         additionalPath = path.join(ROOT_DIR, 'tests', 'e2e', 'pages', `${name}Page.ts`);
         ensureDirectoryExists(path.dirname(additionalPath));
         
         if (!fs.existsSync(additionalPath)) {
-          fs.writeFileSync(additionalPath, pageObjectTemplate(name));
+          fs.writeFileSync(additionalPath, pageObjectTemplate);
           console.log(`Created page object: ${additionalPath}`);
         } else {
           console.log(`Page object already exists: ${additionalPath}`);
@@ -170,11 +229,12 @@ function generateTest() {
     console.log(`Created test file: ${testPath}`);
 
     // Format the file with Prettier if available
-    exec(`npx prettier --write "${testPath}"`, (error) => {
-      if (!error) {
-        console.log(`Formatted test file with Prettier`);
-      }
-    });
+    try {
+      execSync(`npx prettier --write "${testPath}"`);
+      console.log(`Formatted test file with Prettier`);
+    } catch (error) {
+      console.log(`Note: Could not format with Prettier, continuing anyway`);
+    }
 
   } catch (error) {
     console.error('Error generating test file:', error);
@@ -182,4 +242,5 @@ function generateTest() {
   }
 }
 
+// Execute the test generation
 generateTest(); 

@@ -1,4 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+
+/**
+ * Read environment variables from file.
+ * https://github.com/motdotla/dotenv
+ */
+require('dotenv').config({ path: path.join(__dirname, '.env.test'), override: true });
 
 /**
  * See https://playwright.dev/docs/test-configuration
@@ -19,22 +26,26 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Increase workers for better performance */
+  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : 4,
-  /* Reporter to use */
+  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['html'],
+    ['html', { open: 'never' }],
+    ['json', { outputFile: 'playwright-report/results.json' }],
     ['list']
   ],
-  /* Shared settings for all the projects below */
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')` */
-    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || process.env.E2E_BASE_URL || 'http://localhost:3000',
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
-    /* Capture screenshot on failure */
+    /* Take screenshot on failure */
     screenshot: 'only-on-failure',
+    /* Record video on failure */
+    video: 'on-first-retry',
   },
+
   /* Configure projects for different browsers */
   projects: process.env.CI 
     ? [

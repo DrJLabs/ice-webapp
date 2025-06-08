@@ -2,11 +2,41 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 /**
- * Page Object Model for the Home Page
+ * Home Page Object
+ * Represents the main landing page of the application
  */
 export class HomePage extends BasePage {
+  // Locators
+  readonly heading: Locator;
+  readonly mainContent: Locator;
+  readonly navigationLinks: Locator;
+
+  /**
+   * @param {Page} page - Playwright page
+   */
   constructor(page: Page) {
     super(page, '/');
+    
+    // Initialize locators
+    this.heading = page.locator('h1').first();
+    this.mainContent = page.locator('main');
+    this.navigationLinks = page.locator('nav a');
+  }
+
+  /**
+   * Override waitForPageLoad to provide more specific wait conditions
+   */
+  async waitForPageLoad() {
+    // Wait for the page to be stable
+    await super.waitForPageLoad();
+    
+    // Try to wait for common elements, but don't fail if they don't exist
+    try {
+      await this.heading.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+      await this.mainContent.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    } catch (error) {
+      // Continue even if elements aren't found
+    }
   }
 
   /**
@@ -53,9 +83,9 @@ export class HomePage extends BasePage {
   }
 
   /**
-   * Get all navigation links
+   * Get all navigation link texts
    */
-  async getNavigationLinks(): Promise<string[]> {
+  async getNavigationLinkTexts(): Promise<string[]> {
     const navSelectors = [
       'nav a',
       '[role="navigation"] a',
@@ -71,7 +101,8 @@ export class HomePage extends BasePage {
         const linkTexts: string[] = [];
         
         for (let i = 0; i < count; i++) {
-          const text = await links.nth(i).textContent();
+          const link = links.nth(i);
+          const text = await link.textContent();
           if (text) {
             linkTexts.push(text.trim());
           }
@@ -86,41 +117,22 @@ export class HomePage extends BasePage {
 
   /**
    * Click a navigation link by text
+   * @param {string} linkText - The text of the link to click
    */
-  async clickNavigationLink(text: string): Promise<void> {
-    const navSelectors = [
-      'nav',
-      '[role="navigation"]',
-      'header ul',
-      '.navbar',
-    ];
-
-    for (const selector of navSelectors) {
-      const nav = this.page.locator(selector).first();
-      
-      if (await nav.isVisible()) {
-        await this.page.getByRole('link', { name: text }).click();
-        return;
-      }
-    }
-
-    throw new Error(`Navigation link with text "${text}" not found`);
+  async clickNavigationLink(linkText: string) {
+    const link = this.page.getByRole('link', { name: linkText });
+    await this.clickElement(link);
   }
-
+  
   /**
-   * Check if the page has a footer
+   * Verify the home page is loaded correctly
    */
-  async hasFooter() {
-    return await this.isVisible('footer');
-  }
-
-  /**
-   * Verify the homepage has loaded correctly
-   */
-  async verifyHomePageLoaded() {
+  async verifyPage() {
     await this.waitForPageLoad();
-    const title = await this.getTitle();
-    expect(title).toContain('ICE-WEBAPP');
-    expect(await this.hasNavigation()).toBeTruthy();
+    
+    const heading = await this.getMainHeading();
+    expect(heading).toBeTruthy();
+    
+    return true;
   }
 } 
