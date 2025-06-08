@@ -12,10 +12,11 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "codex:verify": "node --version && npm --version && echo 'Codex environment OK'",
-    "coverage:upload": "export CODACY_PROJECT_TOKEN=${CODACY_PROJECT_TOKEN:-''} && curl -Ls https://coverage.codacy.com/get.sh > codacy-coverage.sh && bash codacy-coverage.sh report -r ./coverage/lcov.info",
+    "coverage:upload": ". tools/.codacy-tokens && curl -Ls https://coverage.codacy.com/get.sh | bash -s -- report -r ./coverage/lcov.info",
     "codacy:quality-gates": "node scripts/codacy-quality-gates.js",
     "codacy:commit-quality-gates": "node scripts/codacy-commit-quality-gates.js",
     "codacy:setup-all": "pnpm run codacy:quality-gates && pnpm run codacy:commit-quality-gates",
+    "codacy:cli:analyze": "codacy-analysis-cli analyze",
     "prepare": "husky"
   },
   "dependencies": {

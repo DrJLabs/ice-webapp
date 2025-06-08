@@ -1,0 +1,39 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: "Dependency management workflow, including security scans with Trivy. Applies only to package.json."
+globs: "package.json"
+AlwaysApply: false
+---
+# 📦 Dependency Management & Security
+
+This rule applies **ONLY** when you are modifying the `package.json` file.
+
+## 1. Security Scan for Dependencies
+
+**Immediately after ANY change to `package.json`** (e.g., adding, updating, or removing a dependency), you **MUST** run a security scan using the Codacy analysis tool with Trivy.
+
+-   **Trigger**: Any modification to `package.json`.
+-   **Command**: `codacy_cli_analyze`
+-   **Parameters**:
+    -   `rootPath`: Set to the workspace path.
+    -   `tool`: Set to `"trivy"`.
+    -   `file`: Leave this empty to scan the entire project's dependencies.
+
+## 2. Vulnerability Remediation
+
+-   If the Trivy scan finds any vulnerabilities, you **MUST STOP** all other work.
+-   Your immediate priority is to propose and apply fixes for the security issues.
+-   You may only continue with the original task after all critical and high-severity vulnerabilities have been resolved.
+
+## Example Workflow:
+
+1.  User asks to add `new-package` to the project.
+2.  You edit `package.json` to add the dependency.
+3.  You run `pnpm install` or the equivalent.
+4.  **IMMEDIATELY**, you run `codacy_cli_analyze` with the `trivy` tool.
+5.  Address any vulnerabilities found.
+6.  Proceed with using `new-package` in the codebase.

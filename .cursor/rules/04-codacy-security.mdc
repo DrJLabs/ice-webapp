@@ -1,0 +1,36 @@
+---
+description: 
+globs: src/**/*.ts,src/**/*.tsx,src/**/*.js,src/**/*.jsx,api/**/*.ts
+alwaysApply: false
+---
+---
+description: "Codacy integration for automated quality and security analysis. Applies to all source code files."
+globs: "src/**/*.ts,src/**/*.tsx,src/**/*.js,src/**/*.jsx,api/**/*.ts"
+AlwaysApply: false
+---
+# 🔒 Codacy Quality & Security Gates
+
+This rule governs the integration with Codacy for automated code analysis. It is **critical** that these steps are followed to maintain code quality and security.
+
+## 1. Analysis After Code Changes
+
+**After ANY successful `edit_file` or `reapply` operation on a source file, you MUST immediately run the Codacy analysis tool.**
+
+-   **Command**: `codacy_cli_analyze`
+-   **Parameters**:
+    -   `rootPath`: Set to the workspace path.
+    -   `file`: Set to the path of the file that was just edited.
+-   **Action**: If any issues are found in the new edits, you **MUST** propose and apply fixes for them immediately before proceeding with any other task.
+
+## 2. Security-First Principle
+
+-   All code must be written with security in mind.
+-   Pay close attention to potential vulnerabilities like XSS, CSRF, and insecure direct object references.
+-   Use the security features of our frameworks (e.g., Next.js Server Actions for CSRF protection).
+-   All user input MUST be validated using Zod schemas.
+
+## 3. General Instructions
+
+-   Do not wait for the user to ask for analysis or remind you to run the tool. This process is mandatory and automatic.
+-   Do not try to manually install the Codacy CLI. Use the provided `codacy_cli_analyze` tool.
+-   If you encounter a `404` error when running a Codacy tool that uses repository or organization parameters, offer to run the `codacy_setup_repository` tool to add the repository to Codacy. Do not run it automatically.
