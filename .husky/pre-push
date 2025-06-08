@@ -21,22 +21,6 @@ pnpm run test:coverage || {
 # Extract coverage percentages from the output
 echo "Checking coverage thresholds..."
 
-# Check if coverage summary exists
-if [ ! -f "coverage/coverage-summary.json" ]; then
-  echo "⚠️ No coverage summary found. Make sure tests are generating coverage reports."
-  
-  # Try to generate summary from lcov if it exists
-  if [ -f "coverage/lcov.info" ]; then
-    echo "🔄 Trying to parse coverage from lcov.info instead..."
-    # Continue with minimal check
-  else
-    echo "⚠️ No coverage data found. Skipping coverage checks."
-    echo "   To fix: make sure your tests generate coverage reports."
-    echo "   To bypass: use git push --no-verify"
-    exit 1
-  fi
-fi
-
 # Required thresholds
 LINES_THRESHOLD=70
 STATEMENTS_THRESHOLD=70
@@ -45,64 +29,37 @@ BRANCHES_THRESHOLD=60
 
 FAILED=0
 
-# Function to extract and check coverage
-check_coverage() {
-  if [ -f "coverage/coverage-summary.json" ]; then
-    COVERAGE_REPORT=$(cat coverage/coverage-summary.json)
-    
-    # Extract coverage values
-    LINES_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"lines":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
-    STATEMENTS_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"statements":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
-    FUNCTIONS_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"functions":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
-    BRANCHES_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"branches":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
+# Parse coverage values from vitest output
+LINES_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $2); print $2}')
+STATEMENTS_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $1); print $1}')
+FUNCTIONS_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $3); print $3}')
+BRANCHES_COVERAGE=$(grep -A6 "% Coverage report" -a "$(find . -name "*.log" -o -name "stdout" | tail -1)" | grep -A4 "All files" | awk 'NR==2 {gsub(/[^0-9.]/, "", $4); print $4}')
 
-    # Convert to integers for comparison (e.g., 75.5 -> 7550)
-    LINES_INT=$(echo "$LINES_COVERAGE * 100" | bc | cut -d'.' -f1)
-    STATEMENTS_INT=$(echo "$STATEMENTS_COVERAGE * 100" | bc | cut -d'.' -f1)
-    FUNCTIONS_INT=$(echo "$FUNCTIONS_COVERAGE * 100" | bc | cut -d'.' -f1)
-    BRANCHES_INT=$(echo "$BRANCHES_COVERAGE * 100" | bc | cut -d'.' -f1)
+# Function to compare coverage values
+check_threshold() {
+  coverage="$1"
+  threshold="$2"
+  name="$3"
 
-    LINES_THRESHOLD_INT=$(echo "$LINES_THRESHOLD * 100" | bc)
-    STATEMENTS_THRESHOLD_INT=$(echo "$STATEMENTS_THRESHOLD * 100" | bc)
-    FUNCTIONS_THRESHOLD_INT=$(echo "$FUNCTIONS_THRESHOLD * 100" | bc)
-    BRANCHES_THRESHOLD_INT=$(echo "$BRANCHES_THRESHOLD * 100" | bc)
+  if [ -z "$coverage" ]; then
+    echo "⚠️ Could not determine $name coverage."
+    return 0
+  fi
 
-    # Check if coverage meets thresholds
-    if [ "$LINES_INT" -lt "$LINES_THRESHOLD_INT" ]; then
-      echo "❌ Lines coverage ($LINES_COVERAGE%) is below threshold ($LINES_THRESHOLD%)"
-      FAILED=1
-    else
-      echo "✅ Lines coverage: $LINES_COVERAGE% (threshold: $LINES_THRESHOLD%)"
-    fi
-
-    if [ "$STATEMENTS_INT" -lt "$STATEMENTS_THRESHOLD_INT" ]; then
-      echo "❌ Statements coverage ($STATEMENTS_COVERAGE%) is below threshold ($STATEMENTS_THRESHOLD%)"
-      FAILED=1
-    else
-      echo "✅ Statements coverage: $STATEMENTS_COVERAGE% (threshold: $STATEMENTS_THRESHOLD%)"
-    fi
-
-    if [ "$FUNCTIONS_INT" -lt "$FUNCTIONS_THRESHOLD_INT" ]; then
-      echo "❌ Functions coverage ($FUNCTIONS_COVERAGE%) is below threshold ($FUNCTIONS_THRESHOLD%)"
-      FAILED=1
-    else
-      echo "✅ Functions coverage: $FUNCTIONS_COVERAGE% (threshold: $FUNCTIONS_THRESHOLD%)"
-    fi
-
-    if [ "$BRANCHES_INT" -lt "$BRANCHES_THRESHOLD_INT" ]; then
-      echo "❌ Branches coverage ($BRANCHES_COVERAGE%) is below threshold ($BRANCHES_THRESHOLD%)"
-      FAILED=1
-    else
-      echo "✅ Branches coverage: $BRANCHES_COVERAGE% (threshold: $BRANCHES_THRESHOLD%)"
-    fi
+  # Use awk for floating point comparison
+  if awk "BEGIN {exit !($coverage < $threshold)}"; then
+    echo "❌ $name coverage ($coverage%) is below threshold ($threshold%)"
+    FAILED=1
   else
-    echo "⚠️ Could not check coverage thresholds. Coverage report not found."
-    # Don't fail the build here, let it proceed if the tests passed
+    echo "✅ $name coverage: $coverage% (threshold: $threshold%)"
   fi
 }
 
-# Run coverage check
-check_coverage
+# Check all coverage metrics
+check_threshold "$LINES_COVERAGE" "$LINES_THRESHOLD" "Lines"
+check_threshold "$STATEMENTS_COVERAGE" "$STATEMENTS_THRESHOLD" "Statements"
+check_threshold "$FUNCTIONS_COVERAGE" "$FUNCTIONS_THRESHOLD" "Functions"
+check_threshold "$BRANCHES_COVERAGE" "$BRANCHES_THRESHOLD" "Branches"
 
 # 3. Upload coverage to Codacy
 echo "Uploading coverage to Codacy..."
