@@ -56,35 +56,29 @@ check_coverage() {
     FUNCTIONS_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"functions":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2 | tr -d '"')
     BRANCHES_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"branches":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2 | tr -d '"')
 
-    # Perform floating point comparison using bc
-    LINES_CHECK=$(echo "$LINES_COVERAGE >= $LINES_THRESHOLD" | bc -l)
-    STATEMENTS_CHECK=$(echo "$STATEMENTS_COVERAGE >= $STATEMENTS_THRESHOLD" | bc -l)
-    FUNCTIONS_CHECK=$(echo "$FUNCTIONS_COVERAGE >= $FUNCTIONS_THRESHOLD" | bc -l)
-    BRANCHES_CHECK=$(echo "$BRANCHES_COVERAGE >= $BRANCHES_THRESHOLD" | bc -l)
-
-    # Check if coverage meets thresholds
-    if [ "$LINES_CHECK" -eq 0 ]; then
+    # Check if coverage meets thresholds (bc returns 1 for true and 0 for false)
+    if [ $(echo "$LINES_COVERAGE < $LINES_THRESHOLD" | bc -l) -eq 1 ]; then
       echo "❌ Lines coverage ($LINES_COVERAGE%) is below threshold ($LINES_THRESHOLD%)"
       FAILED=1
     else
       echo "✅ Lines coverage: $LINES_COVERAGE% (threshold: $LINES_THRESHOLD%)"
     fi
 
-    if [ "$STATEMENTS_CHECK" -eq 0 ]; then
+    if [ $(echo "$STATEMENTS_COVERAGE < $STATEMENTS_THRESHOLD" | bc -l) -eq 1 ]; then
       echo "❌ Statements coverage ($STATEMENTS_COVERAGE%) is below threshold ($STATEMENTS_THRESHOLD%)"
       FAILED=1
     else
       echo "✅ Statements coverage: $STATEMENTS_COVERAGE% (threshold: $STATEMENTS_THRESHOLD%)"
     fi
 
-    if [ "$FUNCTIONS_CHECK" -eq 0 ]; then
+    if [ $(echo "$FUNCTIONS_COVERAGE < $FUNCTIONS_THRESHOLD" | bc -l) -eq 1 ]; then
       echo "❌ Functions coverage ($FUNCTIONS_COVERAGE%) is below threshold ($FUNCTIONS_THRESHOLD%)"
       FAILED=1
     else
       echo "✅ Functions coverage: $FUNCTIONS_COVERAGE% (threshold: $FUNCTIONS_THRESHOLD%)"
     fi
 
-    if [ "$BRANCHES_CHECK" -eq 0 ]; then
+    if [ $(echo "$BRANCHES_COVERAGE < $BRANCHES_THRESHOLD" | bc -l) -eq 1 ]; then
       echo "❌ Branches coverage ($BRANCHES_COVERAGE%) is below threshold ($BRANCHES_THRESHOLD%)"
       FAILED=1
     else
