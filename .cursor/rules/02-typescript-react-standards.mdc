@@ -1,0 +1,62 @@
+---
+description: 
+globs: src/**/*.ts, src/**/*.tsx, app/**/*.ts, app/**/*.tsx, components/**/*.ts, components/**/*.tsx, lib/**/*.ts
+alwaysApply: false
+---
+---
+description: "Bleeding-edge development standards for Next.js, React, and TypeScript. Applies to all source files."
+globs:
+  - src/**/*.ts
+  - src/**/*.tsx
+  - app/**/*.ts
+  - app/**/*.tsx
+  - components/**/*.ts
+  - components/**/*.tsx
+  - lib/**/*.ts
+AlwaysApply: false
+---
+
+# Standards for TypeScript, React & Next.js
+
+When working on `.ts` or `.tsx` files, adhere to the following standards.
+
+## 1. Technology Stack Standards
+
+### Next.js with App Router
+- **Always use the App Router**.
+- **Default to Server Components**. Only use Client Components (`'use client'`) when interactivity is required.
+- **Implement proper metadata** for SEO in `layout.tsx` and `page.tsx` files.
+
+### React Modern Patterns
+- **Utilize React hooks** correctly (`useState`, `useEffect`, `useCallback`, `useMemo`).
+- **Implement `Suspense`** for loading states and `ErrorBoundary` for graceful error handling.
+
+### TypeScript Strict Configuration
+- **Use `strict` mode**. Avoid `any` and provide explicit types.
+- **Leverage utility types** (`Partial`, `Omit`, `Record`, etc.) where appropriate.
+- **Create branded types** for strong domain modeling (e.g., `UserId`, `ProductId`).
+
+## 2. Code Quality and Architecture
+
+### Component Architecture
+- **Follow atomic design principles** (atoms, molecules, organisms) where applicable.
+- **Create reusable component variants** using `class-variance-authority`.
+- **Use the `cn()` utility** from `@/lib/utils` for conditional class names.
+- Document components and props with JSDoc comments.
+
+### Data Fetching and State Management
+- **Use Server Actions** for form submissions and data mutations.
+- For complex client-side state, use **Zustand**.
+- Implement optimistic updates for a better user experience where appropriate.
+
+## 3. Local Quality Gates
+
+Before committing changes to `.ts` or `.tsx` files, run these local checks:
+
+# 1. TypeScript validation (CRITICAL)
+# Must pass with zero errors.
+pnpm run type-check
+
+# 2. Code Quality Linting (CRITICAL)
+# Must pass with zero errors.
+pnpm run lint
