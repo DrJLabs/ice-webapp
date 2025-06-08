@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { AxeBuilder } from '@axe-core/playwright';
-import { waitForStable } from '../utils/test-helpers';
+import { getElementText, waitForNetworkIdle } from '../utils/test-helpers';
 
 /**
  * Base Page Object Model class
@@ -9,30 +9,43 @@ import { waitForStable } from '../utils/test-helpers';
 export class BasePage {
   readonly page: Page;
   readonly url: string;
+  readonly baseUrl: string;
 
   /**
    * @param {Page} page - Playwright page
-   * @param {string} url - Page URL path (relative to baseURL)
+   * @param {string} path - Page URL path (relative to baseURL)
    */
-  constructor(page: Page, url: string = '/') {
+  constructor(page: Page, path: string) {
     this.page = page;
-    this.url = url;
+    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    this.url = `${this.baseUrl}${path}`;
   }
 
   /**
    * Navigate to the page
+   * @param params Optional query parameters
    */
-  async goto() {
-    await this.page.goto(this.url, { 
-      waitUntil: 'domcontentloaded' // Faster than 'networkidle'
-    });
+  async goto(params?: Record<string, string>): Promise<void> {
+    let url = this.url;
+    
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        searchParams.append(key, value);
+      });
+      url = `${url}?${searchParams.toString()}`;
+    }
+    
+    await this.page.goto(url);
+    await this.waitForPageLoad();
   }
 
   /**
    * Wait for the page to be loaded
    */
-  async waitForPageLoad() {
-    await waitForStable(this.page);
+  async waitForPageLoad(): Promise<void> {
+    await this.page.waitForLoadState('domcontentloaded');
+    await waitForNetworkIdle(this.page);
   }
 
   /**
@@ -66,8 +79,7 @@ export class BasePage {
    * @param {Locator} locator - Element locator
    */
   async getElementText(locator: Locator): Promise<string> {
-    await locator.waitFor({ state: 'visible' });
-    return await locator.innerText();
+    return getElementText(locator);
   }
 
   /**
@@ -138,5 +150,13 @@ export class BasePage {
 
     const metrics = await this.page.evaluate(() => JSON.stringify(window.performance));
     return JSON.parse(metrics);
+  }
+
+  /**
+   * Get count of elements matching a selector
+   * @param locator Element locator
+   */
+  async getElementCount(locator: Locator): Promise<number> {
+    return await locator.count();
   }
 } 
