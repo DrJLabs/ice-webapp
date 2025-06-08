@@ -1,14 +1,19 @@
 import React, { ReactElement } from 'react';
-import { render, RenderOptions as RTLRenderOptions } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
 // Add custom jest matchers
 expect.extend(toHaveNoViolations);
 
+// Define custom render options type
+type CustomRenderOptions = Parameters<typeof render>[1] & {
+  wrapper?: React.ComponentType<{ children: React.ReactNode }>;
+};
+
 // Define a custom render method that includes common providers
 const customRender = (
   ui: ReactElement,
-  options?: Omit<RTLRenderOptions, 'wrapper'>,
+  options?: Omit<CustomRenderOptions, 'wrapper'>,
 ) => {
   return render(ui, { ...options });
 };
@@ -27,7 +32,7 @@ export { customRender as render };
  */
 export const testA11y = async (
   ui: ReactElement,
-  options?: Omit<RTLRenderOptions, 'wrapper'>,
+  options?: Omit<CustomRenderOptions, 'wrapper'>,
 ) => {
   const container = render(ui, options).container;
   const results = await axe(container);

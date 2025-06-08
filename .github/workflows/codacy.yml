@@ -19,14 +19,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.12.0'
+          node-version: '20.19.1'
           cache: 'pnpm'
 
       # Install pnpm
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 8
           run_install: false
 
       # Install dependencies
@@ -76,13 +76,6 @@ jobs:
         with:
           sarif_file: codacy.sarif
 
-      # Configure Codacy Quality Gates
-      - name: Configure Codacy Quality Gates
-        run: pnpm run codacy:setup-all
-        env:
-          CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
-
       # Upload test coverage
       - name: Upload coverage
         uses: codacy/codacy-coverage-reporter-action@v1
@@ -99,14 +92,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.12.0'
+          node-version: '20.19.1'
           cache: 'pnpm'
 
       # Install pnpm
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 8
           run_install: false
 
       # Security audit
