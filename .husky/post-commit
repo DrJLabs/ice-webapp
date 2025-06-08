@@ -1,7 +1,11 @@
 #!/bin/sh
-echo "🧊 Running post-commit quality gates..."
+
+echo "Running post-commit quality gates..."
+
+# Load Codacy tokens if they exist
 if [ -f "./tools/.codacy-tokens" ]; then
-  echo "🔑 Loading Codacy tokens..."
+  echo "Loading Codacy tokens..."
   . ./tools/.codacy-tokens
 fi
-echo "✅ Post-commit tasks completed"
+
+echo "Post-commit tasks completed"
