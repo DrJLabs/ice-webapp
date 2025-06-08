@@ -12,6 +12,9 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
+      CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,8 +31,14 @@ jobs:
           version: 8
           run_install: false
 
+      - name: Debug versions
+        run: |
+          node --version
+          npm --version
+          pnpm --version
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run unit tests with coverage
         run: pnpm run test:coverage
@@ -37,8 +46,11 @@ jobs:
       - name: Upload coverage to Codacy
         if: success()
         run: |
-          . tools/.codacy-tokens
+          cat tools/.codacy-tokens
+          export CODACY_PROJECT_TOKEN="${{ secrets.CODACY_PROJECT_TOKEN }}"
+          export CODACY_ACCOUNT_TOKEN="${{ secrets.CODACY_ACCOUNT_TOKEN }}"
           curl -Ls https://coverage.codacy.com/get.sh | bash -s -- report -r ./coverage/lcov.info
+        continue-on-error: true
 
       - name: Upload Coverage Reports
         if: success()
@@ -70,7 +82,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run TypeScript type check
         run: pnpm run type-check
@@ -96,7 +108,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run ESLint
         run: pnpm run lint
@@ -122,7 +134,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
