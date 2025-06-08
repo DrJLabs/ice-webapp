@@ -33,6 +33,15 @@ Based on the latest [OpenAI Model Specification](https://model-spec.openai.com/2
 - **Use TypeScript types** as primary documentation for data structures
 - **Leverage existing utility functions** in `src/lib/utils.ts`
 
+### 5. Dependency Management
+- **Use exact version numbers** for all dependencies, never semver ranges
+- **Do not update dependencies** without explicit permission from project maintainers
+- **Each dependency update** must include proper security scanning with Trivy
+- **Create dedicated branches** for dependency updates to isolate changes
+- **Provide clear justification** for each dependency update (security, critical bug fix, etc.)
+- **Run all tests and quality gates** after dependency updates
+- **Immediately address security vulnerabilities** found during dependency scanning
+
 ---
 
 ## ICE-WEBAPP Specific Guidelines
@@ -102,6 +111,8 @@ src/
 - **Sanitize user data** before rendering or storing
 - **Use proper authentication** patterns established in the codebase
 - **Never expose sensitive data** in client-side code
+- **Scan dependencies** for vulnerabilities before adding to the project
+- **Keep dependencies updated** to patch versions with security fixes
 
 ---
 
@@ -138,6 +149,8 @@ Before submitting any code, verify:
 - [ ] No XSS vulnerabilities
 - [ ] Sensitive data is protected
 - [ ] Authentication/authorization is proper
+- [ ] Dependencies are scanned for vulnerabilities
+- [ ] No dependency versions with known security issues
 
 ---
 

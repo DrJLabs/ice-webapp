@@ -12,7 +12,20 @@ AlwaysApply: false
 
 This rule applies **ONLY** when you are modifying the `package.json` file.
 
-## 1. Security Scan for Dependencies
+## 1. Version Locking Policy
+
+All dependencies in this project **MUST** use exact version numbers, not semver ranges.
+
+- ✅ `"next": "14.2.25"` (correct)
+- ❌ `"next": "^14.2.25"` (incorrect)
+
+Dependencies must not be updated without explicit permission from the project maintainers. Any dependency update requires:
+
+1. Clear justification (security, critical bug fix, required feature)
+2. Proper verification that the application works correctly with the new version
+3. Security scanning to ensure no new vulnerabilities are introduced
+
+## 2. Security Scan for Dependencies
 
 **Immediately after ANY change to `package.json`** (e.g., adding, updating, or removing a dependency), you **MUST** run a security scan using the Codacy analysis tool with Trivy.
 
@@ -23,16 +36,26 @@ This rule applies **ONLY** when you are modifying the `package.json` file.
     -   `tool`: Set to `"trivy"`.
     -   `file`: Leave this empty to scan the entire project's dependencies.
 
-## 2. Vulnerability Remediation
+## 3. Vulnerability Remediation
 
 -   If the Trivy scan finds any vulnerabilities, you **MUST STOP** all other work.
 -   Your immediate priority is to propose and apply fixes for the security issues.
 -   You may only continue with the original task after all critical and high-severity vulnerabilities have been resolved.
 
+## 4. Dependency Upgrade Process
+
+When upgrading dependencies:
+
+1. Create a dedicated branch for the upgrade
+2. Update one major dependency or a group of related dependencies at a time
+3. Run all tests to verify functionality
+4. Run security scans to check for vulnerabilities
+5. Document the changes and rationale in the commit message
+
 ## Example Workflow:
 
 1.  User asks to add `new-package` to the project.
-2.  You edit `package.json` to add the dependency.
+2.  You edit `package.json` to add the dependency with an exact version number.
 3.  You run `pnpm install` or the equivalent.
 4.  **IMMEDIATELY**, you run `codacy_cli_analyze` with the `trivy` tool.
 5.  Address any vulnerabilities found.
