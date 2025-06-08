@@ -50,46 +50,41 @@ check_coverage() {
   if [ -f "coverage/coverage-summary.json" ]; then
     COVERAGE_REPORT=$(cat coverage/coverage-summary.json)
     
-    # Extract coverage values
-    LINES_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"lines":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
-    STATEMENTS_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"statements":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
-    FUNCTIONS_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"functions":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
-    BRANCHES_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"branches":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2)
+    # Extract coverage values - remove quotes to get raw numbers
+    LINES_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"lines":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2 | tr -d '"')
+    STATEMENTS_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"statements":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2 | tr -d '"')
+    FUNCTIONS_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"functions":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2 | tr -d '"')
+    BRANCHES_COVERAGE=$(echo "$COVERAGE_REPORT" | grep -o '"branches":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9]*\.[0-9]*' | grep -o 'pct":[0-9]*\.[0-9]*' | cut -d':' -f2 | tr -d '"')
 
-    # Convert to integers for comparison (e.g., 75.5 -> 7550)
-    LINES_INT=$(echo "$LINES_COVERAGE * 100" | bc | cut -d'.' -f1)
-    STATEMENTS_INT=$(echo "$STATEMENTS_COVERAGE * 100" | bc | cut -d'.' -f1)
-    FUNCTIONS_INT=$(echo "$FUNCTIONS_COVERAGE * 100" | bc | cut -d'.' -f1)
-    BRANCHES_INT=$(echo "$BRANCHES_COVERAGE * 100" | bc | cut -d'.' -f1)
-
-    LINES_THRESHOLD_INT=$(echo "$LINES_THRESHOLD * 100" | bc)
-    STATEMENTS_THRESHOLD_INT=$(echo "$STATEMENTS_THRESHOLD * 100" | bc)
-    FUNCTIONS_THRESHOLD_INT=$(echo "$FUNCTIONS_THRESHOLD * 100" | bc)
-    BRANCHES_THRESHOLD_INT=$(echo "$BRANCHES_THRESHOLD * 100" | bc)
+    # Perform floating point comparison using bc
+    LINES_CHECK=$(echo "$LINES_COVERAGE >= $LINES_THRESHOLD" | bc -l)
+    STATEMENTS_CHECK=$(echo "$STATEMENTS_COVERAGE >= $STATEMENTS_THRESHOLD" | bc -l)
+    FUNCTIONS_CHECK=$(echo "$FUNCTIONS_COVERAGE >= $FUNCTIONS_THRESHOLD" | bc -l)
+    BRANCHES_CHECK=$(echo "$BRANCHES_COVERAGE >= $BRANCHES_THRESHOLD" | bc -l)
 
     # Check if coverage meets thresholds
-    if [ "$LINES_INT" -lt "$LINES_THRESHOLD_INT" ]; then
+    if [ "$LINES_CHECK" -eq 0 ]; then
       echo "❌ Lines coverage ($LINES_COVERAGE%) is below threshold ($LINES_THRESHOLD%)"
       FAILED=1
     else
       echo "✅ Lines coverage: $LINES_COVERAGE% (threshold: $LINES_THRESHOLD%)"
     fi
 
-    if [ "$STATEMENTS_INT" -lt "$STATEMENTS_THRESHOLD_INT" ]; then
+    if [ "$STATEMENTS_CHECK" -eq 0 ]; then
       echo "❌ Statements coverage ($STATEMENTS_COVERAGE%) is below threshold ($STATEMENTS_THRESHOLD%)"
       FAILED=1
     else
       echo "✅ Statements coverage: $STATEMENTS_COVERAGE% (threshold: $STATEMENTS_THRESHOLD%)"
     fi
 
-    if [ "$FUNCTIONS_INT" -lt "$FUNCTIONS_THRESHOLD_INT" ]; then
+    if [ "$FUNCTIONS_CHECK" -eq 0 ]; then
       echo "❌ Functions coverage ($FUNCTIONS_COVERAGE%) is below threshold ($FUNCTIONS_THRESHOLD%)"
       FAILED=1
     else
       echo "✅ Functions coverage: $FUNCTIONS_COVERAGE% (threshold: $FUNCTIONS_THRESHOLD%)"
     fi
 
-    if [ "$BRANCHES_INT" -lt "$BRANCHES_THRESHOLD_INT" ]; then
+    if [ "$BRANCHES_CHECK" -eq 0 ]; then
       echo "❌ Branches coverage ($BRANCHES_COVERAGE%) is below threshold ($BRANCHES_THRESHOLD%)"
       FAILED=1
     else
