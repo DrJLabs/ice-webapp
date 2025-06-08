@@ -46,7 +46,7 @@
     "@vitest/coverage-v8": "^0.34.3",
     "autoprefixer": "^10.4.15",
     "dotenv": "^16.3.1",
-    "esbuild": "^0.19.2",
+    "esbuild": "^0.25.0",
     "eslint": "^8.48.0",
     "eslint-config-next": "^13.4.19",
     "husky": "^8.0.3",
