@@ -1,8 +1,20 @@
-name: Optimized CI/CD Pipeline
+# .github/workflows/optimized-ci.yml  
+# DISABLED: Functionality consolidated into build-test-deploy.yml
+# This workflow was causing runner queue saturation and redundant CI runs
+# All CI/CD functionality is handled by the main build-test-deploy.yml workflow
+
+name: Optimized CI/CD Pipeline (DISABLED)
 
 on:
+  # Disabled to prevent runner queue saturation and redundant workflows
+  # All CI/CD functionality moved to build-test-deploy.yml
   workflow_dispatch:
     inputs:
+      force_run:
+        description: 'Force run this redundant workflow (not recommended)'
+        required: false
+        default: false
+        type: boolean
       skip_e2e:
         description: 'Skip E2E tests'
         type: boolean
@@ -12,404 +24,22 @@ on:
         type: choice
         options: ['none', 'staging', 'production']
         default: 'none'
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
 
 # Consolidated concurrency to prevent runner queue saturation
 concurrency:
-  group: optimized-ci-${{ github.ref }}
+  group: optimized-ci-disabled-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Global ephemeral optimization for self-hosted runners
-  RUNNER_TEMP: /tmp/github-runner-${{ github.run_id }}
-  NODE_OPTIONS: --max-old-space-size=4096
-  NEXT_TELEMETRY_DISABLED: 1
-  # pnpm optimization
-  PNPM_CACHE_FOLDER: /tmp/pnpm-cache-${{ github.run_id }}
-  # Build optimization
-  TURBO_CACHE_DIR: /tmp/turbo-cache-${{ github.run_id }}
-
 jobs:
-  # Consolidated quality and build job for maximum efficiency
-  quality-and-build:
-    name: Quality Gates & Build
-    runs-on: [self-hosted, linux, build, quality]
-    timeout-minutes: 20
-    outputs:
-      build-success: ${{ steps.build-check.outputs.success }}
-      cache-hit: ${{ steps.cache-check.outputs.cache-hit }}
-    steps:
-      - name: Pre-job isolation setup
-        run: |
-          # Create unique run isolation directory
-          export RUN_ID="${{ github.run_id }}"
-          export ISOLATION_DIR="$RUNNER_TEMP"
-          
-          # Aggressive cleanup of any previous artifacts
-          sudo pkill -f "node\|pnpm\|npm" || true
-          sudo rm -rf $ISOLATION_DIR || true
-          sudo umount $ISOLATION_DIR 2>/dev/null || true
-          
-          # Create and mount ephemeral tmpfs for maximum performance
-          sudo mkdir -p $ISOLATION_DIR
-          sudo mount -t tmpfs -o size=6G,uid=$(id -u),gid=$(id -g) tmpfs $ISOLATION_DIR
-          
-          # Create organized directory structure
-          mkdir -p $ISOLATION_DIR/{pnpm-store,pnpm-cache,build-cache,node-modules,next-build}
-          
-          echo "✅ Isolation environment prepared: $ISOLATION_DIR"
-
-      - name: Checkout with optimization
-        uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 1 # Shallow clone for speed
-
-      - name: Setup Node.js with caching
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.19.1'
-          cache: 'npm'
-
-      - name: Setup optimized pnpm
-        run: |
-          # Install pnpm with global cache optimization
-          corepack enable
-          corepack prepare pnpm@latest --activate
-          
-          # Configure pnpm for ephemeral high-performance use
-          pnpm config set store-dir $ISOLATION_DIR/pnpm-store
-          pnpm config set cache-dir $ISOLATION_DIR/pnpm-cache
-          pnpm config set node-linker hoisted
-          pnpm config set symlink false
-          pnpm config set side-effects-cache false
-          pnpm config set timeout 300000
-          pnpm config set fetch-retries 5
-          pnpm config set network-concurrency 16
-          
-          echo "✅ pnpm optimized for performance"
-
-      - name: Cache Node modules with tmpfs
-        id: cache-check
-        run: |
-          # Check if we can use cached node_modules
-          if [ -f "pnpm-lock.yaml" ]; then
-            CACHE_KEY=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)
-            if [ -d "/tmp/node-modules-cache-$CACHE_KEY" ]; then
-              echo "Cache hit: copying node_modules from cache"
-              cp -r "/tmp/node-modules-cache-$CACHE_KEY" node_modules
-              echo "cache-hit=true" >> $GITHUB_OUTPUT
-            else
-              echo "cache-hit=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-
-      - name: Install dependencies
-        if: steps.cache-check.outputs.cache-hit != 'true'
-        run: |
-          # Install with optimal settings for CI
-          pnpm install --frozen-lockfile --prefer-offline
-          
-          # Cache the node_modules for future runs
-          CACHE_KEY=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)
-          cp -r node_modules "/tmp/node-modules-cache-$CACHE_KEY"
-          
-          echo "✅ Dependencies installed and cached"
-
-      - name: Parallel quality checks
-        run: |
-          # Run quality checks in parallel for speed
-          echo "Running parallel quality checks..."
-          
-          # Run TypeScript check in background
-          pnpm type-check &
-          TYPECHECK_PID=$!
-          
-          # Run ESLint in background  
-          pnpm lint &
-          ESLINT_PID=$!
-          
-          # Wait for both to complete
-          wait $TYPECHECK_PID
-          TYPECHECK_EXIT=$?
-          
-          wait $ESLINT_PID
-          ESLINT_EXIT=$?
-          
-          # Check if any failed
-          if [ $TYPECHECK_EXIT -ne 0 ] || [ $ESLINT_EXIT -ne 0 ]; then
-            echo "❌ Quality checks failed"
-            exit 1
-          fi
-          
-          echo "✅ All quality checks passed"
-
-      - name: Optimized build
-        id: build-check
-        run: |
-          # Build with optimal settings
-          export TMPDIR=$ISOLATION_DIR/next-build
-          export NEXT_CACHE_DIR=$ISOLATION_DIR/build-cache
-          
-          pnpm build
-          
-          echo "success=true" >> $GITHUB_OUTPUT
-          echo "✅ Build completed successfully"
-
-      - name: Upload build artifacts with compression
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts-${{ github.run_id }}
-          path: |
-            .next/
-            public/
-          retention-days: 1
-          compression-level: 9
-
-      - name: Post-job cleanup
-        if: always()
-        run: |
-          # Comprehensive cleanup
-          sudo umount $RUNNER_TEMP 2>/dev/null || true
-          sudo rm -rf $RUNNER_TEMP || true
-          
-          # Clean up any remaining processes
-          sudo pkill -f "node\|pnpm" || true
-          
-          echo "✅ Cleanup completed"
-
-  # Fast parallel testing
-  test-suite:
-    name: Test Suite
-    runs-on: [self-hosted, linux, test, parallel]
-    needs: quality-and-build
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        test-type: [unit, api]
-    steps:
-      - name: Test isolation setup
-        run: |
-          export TEST_DIR="$RUNNER_TEMP/test-${{ matrix.test-type }}"
-          sudo mkdir -p $TEST_DIR
-          sudo mount -t tmpfs -o size=3G,uid=$(id -u),gid=$(id -g) tmpfs $TEST_DIR
-          echo "TEST_DIR=$TEST_DIR" >> $GITHUB_ENV
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 1
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts-${{ github.run_id }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.19.1'
-
-      - name: Fast dependency restore
-        run: |
-          corepack enable
-          # Use cached node_modules from previous job
-          CACHE_KEY=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)
-          if [ -d "/tmp/node-modules-cache-$CACHE_KEY" ]; then
-            cp -r "/tmp/node-modules-cache-$CACHE_KEY" node_modules
-          else
-            pnpm install --frozen-lockfile --prefer-offline
-          fi
-
-      - name: Run tests
-        run: |
-          export TMPDIR=$TEST_DIR/temp
-          mkdir -p $TMPDIR
-          
-          case "${{ matrix.test-type }}" in
-            unit)
-              pnpm test:unit --reporter=verbose
-              ;;
-            api)
-              pnpm test:api --reporter=verbose
-              ;;
-          esac
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.test-type }}-${{ github.run_id }}
-          path: |
-            coverage/
-            test-results/
-          retention-days: 3
-
-      - name: Test cleanup
-        if: always()
-        run: |
-          sudo umount $TEST_DIR 2>/dev/null || true
-          sudo rm -rf $TEST_DIR || true
-
-  # Optimized E2E testing with Docker
-  e2e-tests:
-    name: E2E Tests (Docker)
-    runs-on: [self-hosted, linux, docker, e2e]
-    needs: [quality-and-build, test-suite]
-    if: github.event.inputs.skip_e2e != 'true'
-    timeout-minutes: 25
-    steps:
-      - name: E2E isolation setup
-        run: |
-          export E2E_DIR="$RUNNER_TEMP/e2e"
-          sudo mkdir -p $E2E_DIR
-          sudo mount -t tmpfs -o size=4G,uid=$(id -u),gid=$(id -g) tmpfs $E2E_DIR
-          echo "E2E_DIR=$E2E_DIR" >> $GITHUB_ENV
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 1
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts-${{ github.run_id }}
-
-      - name: Setup Docker environment
-        run: |
-          # Ensure Docker daemon is running and optimized
-          sudo systemctl start docker || true
-          
-          # Pre-pull Playwright image for speed
-          docker pull mcr.microsoft.com/playwright:v1.52.0-noble &
-          PULL_PID=$!
-          
-          # Create optimized docker network
-          docker network create e2e-network-${{ github.run_id }} || true
-          
-          wait $PULL_PID
-          echo "✅ Docker environment ready"
-
-      - name: Start application server
-        run: |
-          # Start the app in production mode for E2E testing
-          corepack enable
-          pnpm install --frozen-lockfile --prefer-offline
-          
-          # Start server in background
-          pnpm start &
-          APP_PID=$!
-          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
-          
-          # Wait for server to be ready
-          timeout 60 bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 2; done'
-          echo "✅ Application server started"
-
-      - name: Run E2E tests in Docker
-        run: |
-          # Use our optimized Docker setup
-          ./scripts/e2e-docker.sh --browser=chromium
-        env:
-          CI: true
-          PLAYWRIGHT_TEST_BASE_URL: http://host.docker.internal:3000
-
-      - name: Upload E2E artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-results-${{ github.run_id }}
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
-
-      - name: E2E cleanup
-        if: always()
-        run: |
-          # Stop application
-          kill $APP_PID 2>/dev/null || true
-          
-          # Clean up Docker resources
-          docker network rm e2e-network-${{ github.run_id }} || true
-          ./scripts/e2e-docker.sh --cleanup
-          
-          # Clean up tmpfs
-          sudo umount $E2E_DIR 2>/dev/null || true
-          sudo rm -rf $E2E_DIR || true
-
-  # Security scan (weekly schedule to avoid runner contention)
-  security-scan:
-    name: Security Analysis
-    runs-on: [self-hosted, linux, security]
-    needs: quality-and-build
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 1
-
-      - name: Run Trivy security scan
-        run: |
-          # Use Docker for isolated security scanning
-          docker run --rm -v "$(pwd):/workspace" \
-            -v /tmp/trivy-cache:/root/.cache/trivy \
-            aquasec/trivy:latest fs --security-checks vuln,secret \
-            --format table --severity HIGH,CRITICAL /workspace
-
-  # Deployment (conditional)
-  deploy:
-    name: Deploy Application
-    runs-on: [self-hosted, linux, deploy]
-    needs: [quality-and-build, test-suite, e2e-tests]
-    if: success() && github.event.inputs.deployment_target != 'none'
-    timeout-minutes: 15
-    environment: ${{ github.event.inputs.deployment_target || 'staging' }}
-    steps:
-      - name: Deployment placeholder
-        run: |
-          echo "🚀 Deploying to ${{ github.event.inputs.deployment_target || 'staging' }}"
-          echo "This step would contain actual deployment logic"
-
-  # Consolidated summary and cleanup
-  workflow-summary:
-    name: Pipeline Summary
+  # All jobs moved to build-test-deploy.yml
+  disabled-notice:
+    name: Workflow Disabled Notice
     runs-on: [self-hosted, linux]
-    if: always()
-    needs: [quality-and-build, test-suite, e2e-tests, security-scan]
-    timeout-minutes: 5
+    timeout-minutes: 1
+    if: github.event.inputs.force_run == 'true'
     steps:
-      - name: Generate summary
+      - name: Notice
         run: |
-          echo "## 🧊 ICE-WEBAPP CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Quality & Build | ${{ needs.quality-and-build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Suite | ${{ needs.test-suite.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          
-          echo ""
-          echo "### Performance Metrics"
-          echo "- Runner ID: ${{ github.run_id }}"
-          echo "- Workflow: Optimized CI/CD Pipeline"
-          echo "- Trigger: ${{ github.event_name }}"
-          
-      - name: Global cleanup
-        if: always()
-        run: |
-          # Final cleanup of any remaining artifacts
-          sudo rm -rf /tmp/github-runner-${{ github.run_id }}* || true
-          sudo rm -rf /tmp/pnpm-cache-${{ github.run_id }}* || true
-          sudo rm -rf /tmp/turbo-cache-${{ github.run_id }}* || true
-          
-          echo "✅ Global cleanup completed" 
+          echo "⚠️ This workflow has been disabled to eliminate runner queue saturation"
+          echo "All CI/CD functionality is now in build-test-deploy.yml"
+          echo "Please use the main workflow instead or manually trigger specific jobs" 

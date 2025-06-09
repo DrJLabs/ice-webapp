@@ -451,11 +451,29 @@ jobs:
           export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
+      - name: Install system dependencies for Playwright
+        run: |
+          # Fix Ubuntu 24.04+ dependency issues with Playwright browsers
+          # Based on: https://github.com/microsoft/playwright/issues/20664
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2t64 \
+            libatk-bridge2.0-0 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libgbm1 \
+            libxss1 \
+            libasound2-dev || true
+          
       - name: Install Playwright browsers
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
-          # Install Playwright browsers directly
-          npx playwright install chromium --with-deps
+          # Install Playwright browsers without system deps (already installed above)
+          npx playwright install chromium
+          echo "✅ Playwright browsers installed successfully"
 
       - name: Run E2E tests with Playwright
         run: |
