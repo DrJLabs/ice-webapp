@@ -30,6 +30,9 @@ jobs:
           # Clean up any previous run artifacts
           sudo rm -rf $RUNNER_TEMP/quality-check || true
           sudo umount $RUNNER_TEMP/quality-check 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
 
       - name: Setup ephemeral tmpfs for quality checks
         run: |
@@ -48,16 +51,20 @@ jobs:
         with:
           node-version: '20.19.1'
 
-      - name: Setup pnpm for ephemeral use
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10'
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
 
       - name: Configure pnpm for ephemeral performance
         run: |
-          # Ensure pnpm is in PATH and working
-          export PATH=$PNPM_HOME:$PATH
-          which pnpm || (echo "Installing pnpm fallback" && npm install -g pnpm@10)
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm config set store-dir $RUNNER_TEMP/quality-check/.pnpm-store
           pnpm config set cache-dir $RUNNER_TEMP/quality-check/.pnpm-cache
           pnpm config set timeout 300000
@@ -65,17 +72,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
       - name: Type checking
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm type-check
 
       - name: ESLint
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm lint
 
       - name: Post-job cleanup
@@ -94,6 +101,9 @@ jobs:
         run: |
           sudo rm -rf $RUNNER_TEMP/build-app || true
           sudo umount $RUNNER_TEMP/build-app 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
 
       - name: Setup ephemeral tmpfs for build
         run: |
@@ -111,16 +121,20 @@ jobs:
         with:
           node-version: '20.19.1'
 
-      - name: Setup pnpm for ephemeral use
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10'
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
 
       - name: Configure pnpm for ephemeral performance
         run: |
-          # Ensure pnpm is in PATH and working
-          export PATH=$PNPM_HOME:$PATH
-          which pnpm || (echo "Installing pnpm fallback" && npm install -g pnpm@10)
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm config set store-dir $RUNNER_TEMP/build-app/.pnpm-store
           pnpm config set cache-dir $RUNNER_TEMP/build-app/.pnpm-cache
           pnpm config set timeout 300000
@@ -128,12 +142,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
       - name: Build Next.js application
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           export TMPDIR=$RUNNER_TEMP/build-app/.next-tmp
           mkdir -p $TMPDIR
           pnpm build
@@ -166,6 +180,9 @@ jobs:
         run: |
           sudo rm -rf $RUNNER_TEMP/unit-tests || true
           sudo umount $RUNNER_TEMP/unit-tests 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
 
       - name: Setup ephemeral tmpfs for tests
         run: |
@@ -183,16 +200,20 @@ jobs:
         with:
           node-version: '20.19.1'
 
-      - name: Setup pnpm for ephemeral use
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10'
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
 
       - name: Configure pnpm for ephemeral performance
         run: |
-          # Ensure pnpm is in PATH and working
-          export PATH=$PNPM_HOME:$PATH
-          which pnpm || (echo "Installing pnpm fallback" && npm install -g pnpm@10)
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm config set store-dir $RUNNER_TEMP/unit-tests/.pnpm-store
           pnpm config set cache-dir $RUNNER_TEMP/unit-tests/.pnpm-cache
           pnpm config set timeout 300000
@@ -200,12 +221,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
       - name: Run unit tests
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           export TMPDIR=$RUNNER_TEMP/unit-tests/.vitest-tmp
           mkdir -p $TMPDIR
           pnpm test:unit
@@ -236,6 +257,9 @@ jobs:
         run: |
           sudo rm -rf $RUNNER_TEMP/security-scan || true
           sudo umount $RUNNER_TEMP/security-scan 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
 
       - name: Setup ephemeral tmpfs for security scan
         run: |
@@ -253,16 +277,20 @@ jobs:
         with:
           node-version: '20.19.1'
 
-      - name: Setup pnpm for ephemeral use
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10'
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
 
       - name: Configure pnpm for ephemeral performance
         run: |
-          # Ensure pnpm is in PATH and working
-          export PATH=$PNPM_HOME:$PATH
-          which pnpm || (echo "Installing pnpm fallback" && npm install -g pnpm@10)
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm config set store-dir $RUNNER_TEMP/security-scan/.pnpm-store
           pnpm config set cache-dir $RUNNER_TEMP/security-scan/.pnpm-cache
           pnpm config set timeout 300000
@@ -270,7 +298,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
       - name: Run Trivy vulnerability scanner
@@ -297,6 +325,9 @@ jobs:
         run: |
           sudo rm -rf $RUNNER_TEMP/api-tests || true
           sudo umount $RUNNER_TEMP/api-tests 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
 
       - name: Setup ephemeral tmpfs for API tests
         run: |
@@ -320,16 +351,20 @@ jobs:
         with:
           node-version: '20.19.1'
 
-      - name: Setup pnpm for ephemeral use
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10'
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
 
       - name: Configure pnpm for ephemeral performance
         run: |
-          # Ensure pnpm is in PATH and working
-          export PATH=$PNPM_HOME:$PATH
-          which pnpm || (echo "Installing pnpm fallback" && npm install -g pnpm@10)
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm config set store-dir $RUNNER_TEMP/api-tests/.pnpm-store
           pnpm config set cache-dir $RUNNER_TEMP/api-tests/.pnpm-cache
           pnpm config set timeout 300000
@@ -337,12 +372,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
       - name: Run API integration tests
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           export TMPDIR=$RUNNER_TEMP/api-tests/.test-tmp
           mkdir -p $TMPDIR
           pnpm test:api
@@ -366,6 +401,9 @@ jobs:
         run: |
           sudo rm -rf $RUNNER_TEMP/e2e-tests || true
           sudo umount $RUNNER_TEMP/e2e-tests 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
 
       - name: Setup ephemeral tmpfs for E2E tests
         run: |
@@ -389,16 +427,20 @@ jobs:
         with:
           node-version: '20.19.1'
 
-      - name: Setup pnpm for ephemeral use
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10'
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
 
       - name: Configure pnpm for ephemeral performance
         run: |
-          # Ensure pnpm is in PATH and working
-          export PATH=$PNPM_HOME:$PATH
-          which pnpm || (echo "Installing pnpm fallback" && npm install -g pnpm@10)
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm config set store-dir $RUNNER_TEMP/e2e-tests/.pnpm-store
           pnpm config set cache-dir $RUNNER_TEMP/e2e-tests/.pnpm-cache
           pnpm config set timeout 300000
@@ -406,17 +448,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           pnpm playwright install --with-deps
 
       - name: Run E2E tests
         run: |
-          export PATH=$PNPM_HOME:$PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
           export TMPDIR=$RUNNER_TEMP/e2e-tests/.playwright-tmp
           mkdir -p $TMPDIR
           pnpm test:e2e
