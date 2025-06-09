@@ -1,0 +1,99 @@
+name: Test Runner Availability
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_type:
+        description: 'Type of runner to test'
+        required: false
+        default: 'basic'
+        type: choice
+        options:
+          - 'basic'
+          - 'linux'
+          - 'specialized'
+          - 'organization'
+          - 'matrix'
+
+# NOTE: This is a diagnostic workflow for testing runner availability
+# Run manually only to avoid unnecessary runner contention
+
+jobs:
+  test-basic-runner:
+    name: Test Basic Self-Hosted Runner
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Check runner environment
+        run: |
+          echo "Runner OS: $RUNNER_OS"
+          echo "Runner Name: $RUNNER_NAME"
+          echo "Available runners:"
+          echo "Labels: ${{ toJson(runner.labels) }}"
+          echo "Working directory: $(pwd)"
+          echo "User: $(whoami)"
+          echo "GitHub runner scope: Organization-level"
+          
+  test-linux-runner:
+    name: Test Linux Self-Hosted Runner
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 5
+    steps:
+      - name: Check linux runner
+        run: |
+          echo "Linux runner working"
+          echo "Distro: $(cat /etc/os-release | grep PRETTY_NAME)"
+          echo "Architecture: $(uname -m)"
+          echo "Available CPU cores: $(nproc)"
+          echo "Memory: $(free -h | grep Mem)"
+          
+  test-specific-labels:
+    name: Test Specific Label Runner
+    runs-on: [self-hosted, linux, quality]
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - name: Check specific label runner
+        run: |
+          echo "Specific label runner working"
+          echo "This job targets runners with: self-hosted, linux, quality labels"
+          echo "Current labels: ${{ toJson(runner.labels) }}"
+          
+  test-organization-scope:
+    name: Test Organization-Level Runner Access
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 5
+    steps:
+      - name: Test organization runner access
+        run: |
+          echo "Testing organization-level runner access"
+          echo "Repository: ${{ github.repository }}"
+          echo "Organization: ${{ github.repository_owner }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          
+      - name: Check if runner can access repository secrets
+        env:
+          TEST_SECRET: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$TEST_SECRET" ]; then
+            echo "✅ Runner can access repository secrets"
+          else
+            echo "❌ Runner cannot access repository secrets"
+          fi
+          
+  test-matrix-with-labels:
+    name: Test Matrix Strategy with Labels
+    runs-on: [self-hosted, "${{ matrix.label }}"]
+    timeout-minutes: 5
+    continue-on-error: true
+    strategy:
+      matrix:
+        label: [linux, quality]
+    steps:
+      - name: Check matrix label runner
+        run: |
+          echo "Matrix runner working with label: ${{ matrix.label }}"
+          echo "Full runs-on: [self-hosted, ${{ matrix.label }}]"
+          echo "Current labels: ${{ toJson(runner.labels) }}" 

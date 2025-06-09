@@ -1,0 +1,3 @@
+# This workflow has been consolidated into build-test-deploy.yml
+# Removed to eliminate redundant CI runs and runner contention
+# All optimizations from this workflow have been integrated into the main workflow 

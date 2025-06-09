@@ -1,0 +1,209 @@
+---
+description: "Advanced CI/CD automation and workflow repair capabilities. Manual trigger for complex workflow operations."
+globs: github/**/*,**/*.yaml,github/**/*
+alwaysApply: false
+---
+---
+description:
+globs: github/**/*,**/*.yaml,github/**/*
+alwaysApply: false
+---
+# 🚀 Advanced CI/CD Automation & Workflow Repair
+
+This rule governs the AI's advanced capabilities for CI/CD pipeline management, automated issue detection and resolution, and quality gate enforcement using MCP servers.
+
+## 1. Automated Workflow Repair Process
+
+### When Workflow Failures Occur:
+1. **Immediate Detection**: Monitor for failed GitHub Actions workflows
+2. **Root Cause Analysis**: Analyze logs and identify failure patterns
+3. **Automated Fix Creation**: Generate fixes based on error analysis
+4. **PR-based Deployment**: Create pull requests with fixes
+5. **Iterative Improvement**: Wait for CI completion and iterate if needed
+6. **Quality Verification**: Ensure all quality gates pass before merging
+
+### Implementation Commands:
+```bash
+# Create repair branch
+git checkout -b cursor/ci-fix/workflow-repair-$(date +%s)
+
+# Apply fixes based on analysis
+# ... implement fixes ...
+
+# Create PR with fixes
+# Use GitHub MCP to create PR
+# Monitor CI pipeline results
+# Iterate based on feedback
+```
+
+## 2. Quality Gate Enforcement
+
+### Mandatory Quality Checks:
+- **TypeScript Compilation**: Zero errors allowed
+- **ESLint**: Zero warnings/errors allowed  
+- **Security Scanning**: Critical/High vulnerabilities blocked
+- **Test Coverage**: Minimum 70% for new code
+- **Codacy Analysis**: Zero new security issues
+
+### Enforcement Strategy:
+- Pre-commit hooks for fast feedback
+- GitHub Actions for comprehensive checks
+- PR status checks as quality gates
+- Automated fixes via MCP when possible
+
+## 3. Codacy Integration Strategy
+
+### Real-time Analysis:
+- **File-level scanning**: After every edit operation
+- **Security focus**: Immediate feedback on security issues
+- **Dependency scanning**: Trivy integration for vulnerabilities
+- **Coverage tracking**: Real-time coverage impact analysis
+
+### MCP Server Usage:
+```javascript
+// After any file edit
+await codacy_cli_analyze({
+  rootPath: workspace,
+  file: editedFile,
+  provider: "gh",
+  organization: "DrJLabs", 
+  repository: "ice-webapp"
+});
+
+// For security-critical changes
+await codacy_cli_analyze({
+  rootPath: workspace,
+  tool: "trivy"
+});
+```
+
+## 4. Automated PR Workflow for CI Fixes
+
+### Standard Workflow:
+1. **Branch Creation**: `cursor/ci-fix/[issue-description]`
+2. **Problem Analysis**: Use GitHub MCP to get workflow failures
+3. **Fix Implementation**: Apply targeted fixes
+4. **PR Creation**: Include detailed analysis and fixes
+5. **CI Monitoring**: Wait for and analyze CI results
+6. **Iterative Fixes**: Apply additional fixes if needed
+7. **Quality Verification**: Ensure all gates pass
+
+### PR Template Usage:
+```markdown
+## 🔧 CI/CD Fix: [Issue Description]
+
+### Problem Analysis
+- **Failed Workflow**: [workflow name]
+- **Root Cause**: [analysis]
+- **Impact**: [scope of issue]
+
+### Solution Applied
+- [x] [Specific fix 1]
+- [x] [Specific fix 2]
+
+### Quality Verification
+- [x] All tests pass
+- [x] Security scan clean
+- [x] Codacy analysis passed
+```
+
+## 5. Branch Strategy Enforcement
+
+### Branch Naming Convention:
+- `cursor/ci-fix/[description]` - CI/CD related fixes
+- `cursor/security/[vulnerability]` - Security fixes
+- `cursor/quality/[improvement]` - Quality improvements
+
+### Protection Rules:
+- All changes via PRs (no direct pushes to main/develop)
+- Require status checks: build, test, security scan
+- Require up-to-date branches before merge
+- Auto-delete head branches after merge
+
+## 6. Security-First Approach
+
+### Immediate Actions for Security Issues:
+1. **Stop all operations** if critical vulnerability found
+2. **Create emergency security branch**
+3. **Apply security fixes immediately**
+4. **Fast-track PR review for security fixes**
+5. **Verify fix effectiveness before continuing**
+
+### Dependency Management:
+- Scan all new dependencies with Trivy
+- Block PRs with high/critical vulnerabilities
+- Automated dependency updates for security patches
+- Clear audit trail for all dependency changes
+
+## 7. Performance Monitoring
+
+### CI Pipeline Optimization:
+- **Parallel job execution**: Maximize runner efficiency
+- **Caching strategy**: Aggressive caching for node_modules, builds
+- **Artifact management**: Efficient artifact sharing between jobs
+- **Runner selection**: Appropriate runner tags for workload type
+
+### Metrics Tracking:
+- Build time trends
+- Test execution time
+- Quality gate pass rates
+- Security issue resolution time
+
+## 8. Error Recovery Patterns
+
+### Common CI Failures & Auto-Fixes:
+- **Dependency conflicts**: Auto-resolve with lock file updates
+- **Test failures**: Analyze and suggest fixes
+- **Build failures**: Environment and configuration fixes
+- **Quality gate failures**: Code improvements and exceptions
+
+### Escalation Process:
+1. Auto-fix if pattern is known
+2. Create PR with proposed fix
+3. Tag for human review if complex
+4. Document new patterns for future automation
+
+## 9. Integration with External Tools
+
+### Required MCP Server Operations:
+- **GitHub**: Workflow monitoring, PR management, issue tracking
+- **Codacy**: Code analysis, security scanning, coverage tracking
+- **Local CLI**: Immediate feedback, pre-commit validation
+
+### API Rate Limiting:
+- Implement exponential backoff for API calls
+- Cache results when appropriate
+- Batch operations when possible
+- Respect rate limits and plan accordingly
+
+## 10. Reporting and Documentation
+
+### Automated Reporting:
+- Weekly CI/CD health reports
+- Security vulnerability trends
+- Quality metrics dashboards
+- Performance improvement tracking
+
+### Documentation Updates:
+- Auto-update README with CI status badges
+- Maintain DEPLOYMENT.md with current procedures
+- Update troubleshooting guides based on new patterns
+- Version control for all CI/CD configurations
+
+---
+
+## Emergency Procedures
+
+### Critical Failure Response:
+1. **Immediate escalation** for production-impacting issues
+2. **Rollback procedures** if needed
+3. **Incident documentation** and post-mortem
+4. **Process improvements** based on lessons learned
+
+### Quality Gate Bypass:
+- Only for emergency security fixes
+- Requires explicit documentation
+- Time-limited bypass windows
+- Mandatory follow-up remediation
+
+This rule ensures comprehensive CI/CD automation with a focus on quality, security, and continuous improvement.

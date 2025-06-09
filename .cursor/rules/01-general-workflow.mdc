@@ -6,7 +6,6 @@ alwaysApply: true
 ---
 description: "High-level development workflow, including branching strategy and quality gate principles for the ICE-WEBAPP project. This rule is always active."
 globs: "**/*"
-AlwaysApply: true
 ---
 # 🧊 General ICE-WEBAPP Workflow
 

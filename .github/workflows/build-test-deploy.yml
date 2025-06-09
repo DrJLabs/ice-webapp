@@ -1,0 +1,547 @@
+name: Build, Test & Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Self-hosted runner optimizations with proper cleanup and ephemeral patterns
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Global environment for ephemeral runner optimization
+  RUNNER_TEMP: /tmp/github-runner-${{ github.run_id }}
+  NODE_OPTIONS: --max-old-space-size=4096
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  # Quality checks with proper cleanup
+  quality-checks:
+    name: Code Quality & Linting
+    runs-on: [self-hosted, linux, quality, lint]
+    timeout-minutes: 10
+    steps:
+      - name: Pre-job cleanup
+        run: |
+          # Clean up any previous run artifacts
+          sudo rm -rf $RUNNER_TEMP/quality-check || true
+          sudo umount $RUNNER_TEMP/quality-check 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
+
+      - name: Setup ephemeral tmpfs for quality checks
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/quality-check
+          sudo mount -t tmpfs -o size=2G tmpfs $RUNNER_TEMP/quality-check || echo "tmpfs already mounted"
+        continue-on-error: true
+
+      - name: Checkout with clean flag
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.1'
+
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
+
+      - name: Configure pnpm for ephemeral performance
+        run: |
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm config set store-dir $RUNNER_TEMP/quality-check/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/quality-check/.pnpm-cache
+          pnpm config set timeout 300000
+          pnpm config set fetch-retries 5
+
+      - name: Install dependencies
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm install --frozen-lockfile
+
+      - name: Type checking
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm type-check
+
+      - name: ESLint
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm lint
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/quality-check 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP/quality-check || true
+
+  # Build with performance optimization
+  build-app:
+    name: Build Application
+    runs-on: [self-hosted, linux, build, fast-setup]
+    timeout-minutes: 15
+    steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf $RUNNER_TEMP/build-app || true
+          sudo umount $RUNNER_TEMP/build-app 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
+
+      - name: Setup ephemeral tmpfs for build
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/build-app
+          sudo mount -t tmpfs -o size=4G tmpfs $RUNNER_TEMP/build-app || echo "tmpfs already mounted"
+        continue-on-error: true
+
+      - name: Checkout with clean flag
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.1'
+
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
+
+      - name: Configure pnpm for ephemeral performance
+        run: |
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm config set store-dir $RUNNER_TEMP/build-app/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/build-app/.pnpm-cache
+          pnpm config set timeout 300000
+          pnpm config set fetch-retries 5
+
+      - name: Install dependencies
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm install --frozen-lockfile
+
+      - name: Build Next.js application
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          export TMPDIR=$RUNNER_TEMP/build-app/.next-tmp
+          mkdir -p $TMPDIR
+          pnpm build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            .next/
+            public/
+          retention-days: 1
+        continue-on-error: true
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/build-app 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP/build-app || true
+
+  # Unit tests with parallel execution
+  unit-tests:
+    name: Unit Tests
+    runs-on: [self-hosted, linux, test, parallel, fast]
+    timeout-minutes: 10
+    steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf $RUNNER_TEMP/unit-tests || true
+          sudo umount $RUNNER_TEMP/unit-tests 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
+
+      - name: Setup ephemeral tmpfs for tests
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/unit-tests
+          sudo mount -t tmpfs -o size=2G tmpfs $RUNNER_TEMP/unit-tests || echo "tmpfs already mounted"
+        continue-on-error: true
+
+      - name: Checkout with clean flag
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.1'
+
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
+
+      - name: Configure pnpm for ephemeral performance
+        run: |
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm config set store-dir $RUNNER_TEMP/unit-tests/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/unit-tests/.pnpm-cache
+          pnpm config set timeout 300000
+          pnpm config set fetch-retries 5
+
+      - name: Install dependencies
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          export TMPDIR=$RUNNER_TEMP/unit-tests/.vitest-tmp
+          mkdir -p $TMPDIR
+          pnpm test:unit
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-coverage
+          path: coverage/
+          retention-days: 1
+        continue-on-error: true
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/unit-tests 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP/unit-tests || true
+
+  # Security scanning with focused tools
+  security-scan:
+    name: Security Scanning
+    runs-on: [self-hosted, linux, security, scan]
+    timeout-minutes: 15
+    steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf $RUNNER_TEMP/security-scan || true
+          sudo umount $RUNNER_TEMP/security-scan 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
+
+      - name: Setup ephemeral tmpfs for security scan
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/security-scan
+          sudo mount -t tmpfs -o size=2G tmpfs $RUNNER_TEMP/security-scan || echo "tmpfs already mounted"
+        continue-on-error: true
+
+      - name: Checkout with clean flag
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.1'
+
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
+
+      - name: Configure pnpm for ephemeral performance
+        run: |
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm config set store-dir $RUNNER_TEMP/security-scan/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/security-scan/.pnpm-cache
+          pnpm config set timeout 300000
+          pnpm config set fetch-retries 5
+
+      - name: Install dependencies
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm install --frozen-lockfile
+
+      - name: Run Trivy vulnerability scanner
+        run: |
+          # Basic dependency scanning with Trivy
+          docker run --rm -v "$(pwd):/workspace" \
+            aquasec/trivy:latest fs --security-checks vuln \
+            --format table /workspace/package.json || true
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/security-scan 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP/security-scan || true
+
+  # API integration tests
+  api-tests:
+    name: API Integration Tests
+    runs-on: [self-hosted, linux, integration, api, backend]
+    timeout-minutes: 15
+    needs: [build-app]
+    steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf $RUNNER_TEMP/api-tests || true
+          sudo umount $RUNNER_TEMP/api-tests 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
+
+      - name: Setup ephemeral tmpfs for API tests
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/api-tests
+          sudo mount -t tmpfs -o size=2G tmpfs $RUNNER_TEMP/api-tests || echo "tmpfs already mounted"
+        continue-on-error: true
+
+      - name: Checkout with clean flag
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Download build artifacts (if available)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+        continue-on-error: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.1'
+
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
+
+      - name: Configure pnpm for ephemeral performance
+        run: |
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm config set store-dir $RUNNER_TEMP/api-tests/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/api-tests/.pnpm-cache
+          pnpm config set timeout 300000
+          pnpm config set fetch-retries 5
+
+      - name: Install dependencies
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm install --frozen-lockfile
+
+      - name: Run API integration tests
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          export TMPDIR=$RUNNER_TEMP/api-tests/.test-tmp
+          mkdir -p $TMPDIR
+          pnpm test:api
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/api-tests 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP/api-tests || true
+
+  # E2E tests with Playwright
+  e2e-tests:
+    name: E2E Tests
+    runs-on: [self-hosted, linux, test]
+    timeout-minutes: 20
+    needs: [build-app]
+    steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf $RUNNER_TEMP/e2e-tests || true
+          sudo umount $RUNNER_TEMP/e2e-tests 2>/dev/null || true
+          # Aggressive pnpm cleanup
+          sudo rm -rf ~/setup-pnpm || true
+          sudo pkill -f pnpm || true
+
+      - name: Setup ephemeral tmpfs for E2E tests
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/e2e-tests
+          sudo mount -t tmpfs -o size=4G tmpfs $RUNNER_TEMP/e2e-tests || echo "tmpfs already mounted"
+        continue-on-error: true
+
+      - name: Checkout with clean flag
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Download build artifacts (if available)
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+        continue-on-error: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.1'
+
+      - name: Setup pnpm with cleanup
+        run: |
+          # Force clean any existing pnpm installation
+          sudo rm -rf ~/setup-pnpm || true
+          # Install pnpm directly via npm
+          npm install -g pnpm@10
+          export PATH=$(npm config get prefix)/bin:$PATH
+          which pnpm
+          pnpm --version
+
+      - name: Configure pnpm for ephemeral performance
+        run: |
+          # Ensure pnpm is in PATH
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm config set store-dir $RUNNER_TEMP/e2e-tests/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/e2e-tests/.pnpm-cache
+          pnpm config set timeout 300000
+          pnpm config set fetch-retries 5
+
+      - name: Install dependencies
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          pnpm playwright install --with-deps
+
+      - name: Run E2E tests
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          export TMPDIR=$RUNNER_TEMP/e2e-tests/.playwright-tmp
+          mkdir -p $TMPDIR
+          pnpm test:e2e
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+        continue-on-error: true
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/e2e-tests 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP/e2e-tests || true
+
+  # Production deployment preparation
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: [self-hosted, linux, deploy, docker, production]
+    timeout-minutes: 20
+    needs: [quality-checks, unit-tests, security-scan, api-tests, e2e-tests]
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf $RUNNER_TEMP/deploy-staging || true
+          sudo umount $RUNNER_TEMP/deploy-staging 2>/dev/null || true
+
+      - name: Setup ephemeral tmpfs for deployment
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/deploy-staging
+          sudo mount -t tmpfs -o size=2G tmpfs $RUNNER_TEMP/deploy-staging || echo "tmpfs already mounted"
+        continue-on-error: true
+
+      - name: Checkout with clean flag
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Build and push Docker image
+        run: |
+          export TMPDIR=$RUNNER_TEMP/deploy-staging/.docker-tmp
+          mkdir -p $TMPDIR
+          # Docker build commands would go here
+          echo "Docker build for staging deployment"
+
+      - name: Deploy to staging environment
+        run: |
+          # Deployment commands would go here
+          echo "Deploying to staging environment"
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/deploy-staging 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP/deploy-staging || true
+
+  # Summary job to consolidate results
+  workflow-summary:
+    name: Workflow Summary
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 5
+    needs: [quality-checks, build-app, unit-tests, security-scan, api-tests, e2e-tests]
+    if: always()
+    steps:
+      - name: Workflow summary
+        run: |
+          echo "=== Workflow Summary ==="
+          echo "Quality Checks: ${{ needs.quality-checks.result }}"
+          echo "Build: ${{ needs.build-app.result }}"
+          echo "Unit Tests: ${{ needs.unit-tests.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo "API Tests: ${{ needs.api-tests.result }}"
+          echo "E2E Tests: ${{ needs.e2e-tests.result }}"
+          echo "========================"

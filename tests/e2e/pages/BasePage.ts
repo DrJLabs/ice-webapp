@@ -116,7 +116,8 @@ export class BasePage {
     // Wait for page to be stable before checking accessibility
     await this.waitForPageLoad();
     
-    const accessibilityScanResults = await new AxeBuilder({ page: this.page })
+    // Use type assertion to resolve compatibility issue between @axe-core/playwright and @playwright/test
+    const accessibilityScanResults = await new AxeBuilder({ page: this.page as any })
       .exclude('[aria-hidden="true"]') // Exclude hidden elements for performance
       .analyze();
       
