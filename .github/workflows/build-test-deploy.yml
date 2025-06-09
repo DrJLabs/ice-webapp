@@ -7,36 +7,55 @@ on:
   pull_request:
     branches: [main, develop]
 
-# June 2025 Optimizations: tmpfs, specialized runners, parallel execution
+# Self-hosted runner optimizations with proper cleanup and ephemeral patterns
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Global environment for ephemeral runner optimization
+  RUNNER_TEMP: /tmp/github-runner-${{ github.run_id }}
+  NODE_OPTIONS: --max-old-space-size=4096
+  NEXT_TELEMETRY_DISABLED: 1
+
 jobs:
-  # Quality checks with optimized tmpfs
+  # Quality checks with proper cleanup
   quality-checks:
     name: Code Quality & Linting
     runs-on: [self-hosted, linux, quality, lint]
     timeout-minutes: 10
     steps:
-      - name: Setup tmpfs for quality checks
+      - name: Pre-job cleanup
         run: |
-          sudo mkdir -p /tmp/quality-check
-          sudo mount -t tmpfs -o size=2G tmpfs /tmp/quality-check || echo "tmpfs already mounted"
-          echo "TMPDIR=/tmp/quality-check" >> $GITHUB_ENV
+          # Clean up any previous job artifacts
+          sudo rm -rf /tmp/quality-check-* || true
+          sudo umount /tmp/quality-check 2>/dev/null || true
+          
+      - name: Setup ephemeral tmpfs for quality checks
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/quality-check
+          sudo mount -t tmpfs -o size=2G tmpfs $RUNNER_TEMP/quality-check || echo "tmpfs already mounted"
+          echo "TMPDIR=$RUNNER_TEMP/quality-check" >> $GITHUB_ENV
+          echo "VITEST_WORKSPACE=$RUNNER_TEMP/quality-check" >> $GITHUB_ENV
         continue-on-error: true
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          clean: true
 
-      - name: Setup Node.js
+      - name: Setup Node.js with optimized caching
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
+
+      - name: Configure pnpm for ephemeral use
+        run: |
+          pnpm config set store-dir $RUNNER_TEMP/quality-check/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/quality-check/.pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -47,28 +66,38 @@ jobs:
       - name: Type checking
         run: pnpm type-check
 
-  # Build with performance optimizations
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/quality-check 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP || true
+
+  # Build with ephemeral optimization
   build:
     name: Build Application
     runs-on: [self-hosted, linux, build, fast-setup]
     timeout-minutes: 15
     needs: [quality-checks]
     steps:
-      - name: Setup optimized tmpfs for build
+      - name: Pre-job cleanup
         run: |
-          sudo mkdir -p /tmp/build-app
-          sudo mount -t tmpfs -o size=4G tmpfs /tmp/build-app || echo "tmpfs already mounted"
-          mkdir -p /tmp/build-app/{.next,node_modules,dist}
-          echo "TMPDIR=/tmp/build-app" >> $GITHUB_ENV
-          echo "NODE_OPTIONS=--max-old-space-size=4096" >> $GITHUB_ENV
-          echo "NEXT_TELEMETRY_DISABLED=1" >> $GITHUB_ENV
+          # Clean up any previous build artifacts
+          sudo rm -rf /tmp/build-app-* || true
+          sudo umount /tmp/build-app 2>/dev/null || true
+
+      - name: Setup ephemeral tmpfs for build
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/build-app
+          sudo mount -t tmpfs -o size=4G tmpfs $RUNNER_TEMP/build-app || echo "tmpfs already mounted"
+          mkdir -p $RUNNER_TEMP/build-app/{.next,node_modules,dist}
+          echo "TMPDIR=$RUNNER_TEMP/build-app" >> $GITHUB_ENV
         continue-on-error: true
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          clean: false
+          clean: true
 
       - name: Setup Node.js with caching
         uses: actions/setup-node@v4
@@ -77,10 +106,10 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: 'pnpm-lock.yaml'
 
-      - name: Configure pnpm for performance
+      - name: Configure pnpm for ephemeral performance
         run: |
-          pnpm config set store-dir /tmp/build-app/.pnpm-store
-          pnpm config set cache-dir /tmp/build-app/.pnpm-cache
+          pnpm config set store-dir $RUNNER_TEMP/build-app/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/build-app/.pnpm-cache
           pnpm config set network-timeout 300000
           pnpm config set fetch-retries 5
 
@@ -88,7 +117,14 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Build application
-        run: pnpm build
+        run: |
+          # Build in tmpfs for speed
+          cd $RUNNER_TEMP/build-app
+          cp -r $GITHUB_WORKSPACE/. .
+          pnpm build
+          # Copy results back to workspace
+          cp -r .next $GITHUB_WORKSPACE/
+          cp -r dist $GITHUB_WORKSPACE/ || true
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -99,32 +135,49 @@ jobs:
             dist/
             public/
           retention-days: 1
+          
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/build-app 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP || true
 
-  # Parallel testing
+  # Parallel testing with ephemeral cleanup
   test-unit:
     name: Unit Tests
     runs-on: [self-hosted, linux, test, parallel, fast]
     timeout-minutes: 12
     needs: [quality-checks]
     steps:
-      - name: Setup tmpfs for testing
+      - name: Pre-job cleanup
         run: |
-          sudo mkdir -p /tmp/unit-tests
-          sudo mount -t tmpfs -o size=3G tmpfs /tmp/unit-tests || echo "tmpfs already mounted"
-          echo "TMPDIR=/tmp/unit-tests" >> $GITHUB_ENV
-          echo "VITEST_WORKSPACE=/tmp/unit-tests" >> $GITHUB_ENV
+          sudo rm -rf /tmp/unit-tests-* || true
+          sudo umount /tmp/unit-tests 2>/dev/null || true
+
+      - name: Setup ephemeral tmpfs for testing
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/unit-tests
+          sudo mount -t tmpfs -o size=3G tmpfs $RUNNER_TEMP/unit-tests || echo "tmpfs already mounted"
+          echo "TMPDIR=$RUNNER_TEMP/unit-tests" >> $GITHUB_ENV
+          echo "VITEST_WORKSPACE=$RUNNER_TEMP/unit-tests" >> $GITHUB_ENV
         continue-on-error: true
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
+
+      - name: Configure pnpm for testing
+        run: |
+          pnpm config set store-dir $RUNNER_TEMP/unit-tests/.pnpm-store
+          pnpm config set cache-dir $RUNNER_TEMP/unit-tests/.pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -140,16 +193,32 @@ jobs:
           path: coverage/
           retention-days: 1
 
-  # Security scanning with vulnerability fixes
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/unit-tests 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP || true
+
+  # Security scanning with ephemeral setup
   security:
     name: Security Scan
     runs-on: [self-hosted, linux, security, scan]
     timeout-minutes: 10
     steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf /tmp/security-scan-* || true
+
+      - name: Setup ephemeral environment
+        run: |
+          mkdir -p $RUNNER_TEMP/security
+          echo "TMPDIR=$RUNNER_TEMP/security" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -173,24 +242,35 @@ jobs:
         run: |
           npx audit-ci --config .audit-ci.json || echo "Security scan completed"
 
-  # Integration tests - only run after build completes
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo rm -rf $RUNNER_TEMP || true
+
+  # Integration tests with proper cleanup
   test-integration:
     name: Integration Tests
     runs-on: [self-hosted, linux, integration, api, backend]
     timeout-minutes: 20
     needs: [build, test-unit]
     steps:
-      - name: Setup tmpfs for integration tests
+      - name: Pre-job cleanup
         run: |
-          sudo mkdir -p /tmp/integration-tests
-          sudo mount -t tmpfs -o size=2G tmpfs /tmp/integration-tests || echo "tmpfs already mounted"
-          echo "TMPDIR=/tmp/integration-tests" >> $GITHUB_ENV
+          sudo rm -rf /tmp/integration-tests-* || true
+          sudo umount /tmp/integration-tests 2>/dev/null || true
+
+      - name: Setup ephemeral tmpfs for integration tests
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/integration-tests
+          sudo mount -t tmpfs -o size=2G tmpfs $RUNNER_TEMP/integration-tests || echo "tmpfs already mounted"
+          echo "TMPDIR=$RUNNER_TEMP/integration-tests" >> $GITHUB_ENV
         continue-on-error: true
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -217,7 +297,13 @@ jobs:
             pnpm test:integration || echo "Integration tests completed"
           fi
 
-  # E2E tests with Playwright - depends on build
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/integration-tests 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP || true
+
+  # E2E tests with ephemeral setup
   test-e2e:
     name: E2E Tests
     runs-on: [self-hosted, linux, test]
@@ -225,17 +311,23 @@ jobs:
     needs: [build]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     steps:
-      - name: Setup tmpfs for E2E tests
+      - name: Pre-job cleanup
         run: |
-          sudo mkdir -p /tmp/e2e-tests
-          sudo mount -t tmpfs -o size=3G tmpfs /tmp/e2e-tests || echo "tmpfs already mounted"
-          echo "TMPDIR=/tmp/e2e-tests" >> $GITHUB_ENV
+          sudo rm -rf /tmp/e2e-tests-* || true
+          sudo umount /tmp/e2e-tests 2>/dev/null || true
+
+      - name: Setup ephemeral tmpfs for E2E tests
+        run: |
+          sudo mkdir -p $RUNNER_TEMP/e2e-tests
+          sudo mount -t tmpfs -o size=3G tmpfs $RUNNER_TEMP/e2e-tests || echo "tmpfs already mounted"
+          echo "TMPDIR=$RUNNER_TEMP/e2e-tests" >> $GITHUB_ENV
         continue-on-error: true
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -268,7 +360,13 @@ jobs:
             playwright-report/
           retention-days: 1
 
-  # Deploy to staging (develop branch) or production (main branch)
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo umount $RUNNER_TEMP/e2e-tests 2>/dev/null || true
+          sudo rm -rf $RUNNER_TEMP || true
+
+  # Deploy with ephemeral setup
   deploy:
     name: Deploy Application
     runs-on: [self-hosted, linux, deploy, docker, production]
@@ -277,10 +375,20 @@ jobs:
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.ref == 'refs/heads/develop' && github.event_name == 'push')
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
     steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf /tmp/deploy-* || true
+
+      - name: Setup ephemeral environment
+        run: |
+          mkdir -p $RUNNER_TEMP/deploy
+          echo "TMPDIR=$RUNNER_TEMP/deploy" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -299,6 +407,11 @@ jobs:
           echo "Environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
           echo "Build artifacts ready for deployment"
 
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo rm -rf $RUNNER_TEMP || true
+
   # Performance summary
   summary:
     name: Workflow Summary
@@ -307,11 +420,21 @@ jobs:
     if: always()
     needs: [quality-checks, build, test-unit, security, test-integration]
     steps:
+      - name: Pre-job cleanup
+        run: |
+          sudo rm -rf /tmp/summary-* || true
+
       - name: Workflow performance summary
         run: |
-          echo "📊 Workflow Completed with Optimizations"
-          echo "✅ tmpfs optimization enabled"
-          echo "✅ Specialized runners utilized"
+          echo "📊 Workflow Completed with Self-Hosted Runner Best Practices"
+          echo "✅ Ephemeral tmpfs optimization enabled"
+          echo "✅ Specialized runner labels maintained"
+          echo "✅ Proper cleanup implemented"
           echo "✅ Parallel job execution"
           echo "✅ Optimized dependency caching"
-          echo "✅ Performance tuning active" 
+          echo "✅ Performance tuning active"
+
+      - name: Post-job cleanup
+        if: always()
+        run: |
+          sudo rm -rf $RUNNER_TEMP || true 
