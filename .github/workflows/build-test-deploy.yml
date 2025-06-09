@@ -454,7 +454,7 @@ jobs:
       - name: Install system dependencies for Playwright
         run: |
           # Fix Ubuntu 24.04+ dependency issues with Playwright browsers
-          # Based on: https://github.com/microsoft/playwright/issues/20664
+          # Based on: https://github.com/microsoft/playwright/issues/32546 and #20664
           sudo apt-get update
           sudo apt-get install -y \
             libasound2t64 \
@@ -473,18 +473,25 @@ jobs:
             libcairo-gobject2 \
             libpango-1.0-0 \
             libharfbuzz0b \
-            libgdk-pixbuf2.0-0 \
-            libgtk-3-0 \
             libgssapi-krb5-2 \
-            libgtk-4-1 || true
+            libgtk-4-1 \
+            libwoff1 \
+            libopus0 \
+            libwebpdemux2 \
+            libharfbuzz-icu0 \
+            libhyphen0 \
+            libflite1 \
+            libegl1 \
+            libevdev2 \
+            libgles2 \
+            gstreamer1.0-libav || true
           echo "✅ System dependencies installed"
           
       - name: Install Playwright browsers
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
           # Install Playwright browsers without system deps (already installed above)
-          # Use --force-install to ensure fresh browser installation
-          npx playwright install --force-install chromium
+          npx playwright install chromium
           # Verify browser installation
           npx playwright --version
           echo "✅ Playwright browsers installed successfully"
