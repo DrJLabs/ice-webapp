@@ -1,13 +1,7 @@
 ---
-description: 
-globs: src/**/*.ts, src/**/*.tsx, app/**/*.ts, app/**/*.tsx, components/**/*.ts, components/**/*.tsx, lib/**/*.ts
-alwaysApply: false
----
----
 description: "Bleeding-edge development standards for Next.js, React, and TypeScript. Applies to all source files."
-globs:
-  - src/**/*.ts
-  - src/**/*.tsx
+globs: "src/**/*.ts,src/**/*.tsx,app/**/*.ts,app/**/*.tsx,components/**/*.ts,components/**/*.tsx,lib/**/*.ts"
+---
   - app/**/*.ts
   - app/**/*.tsx
   - components/**/*.ts

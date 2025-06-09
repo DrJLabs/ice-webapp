@@ -1,6 +1,11 @@
 ---
+description: "Advanced CI/CD automation and workflow repair capabilities. Manual trigger for complex workflow operations."
+globs: github/**/*,**/*.yaml,github/**/*
+alwaysApply: false
+---
+---
 description:
-globs:
+globs: github/**/*,**/*.yaml,github/**/*
 alwaysApply: false
 ---
 # 🚀 Advanced CI/CD Automation & Workflow Repair

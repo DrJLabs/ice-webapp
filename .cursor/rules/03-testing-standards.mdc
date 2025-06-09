@@ -6,7 +6,6 @@ alwaysApply: false
 ---
 description: "Testing standards and workflows for Vitest and Playwright. Applies to all test files."
 globs: "tests/**/*.ts,**/*.test.tsx,**/*.test.ts"
-AlwaysApply: false
 ---
 # 🧪 Testing Standards and Workflow
 

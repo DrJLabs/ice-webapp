@@ -6,7 +6,6 @@ alwaysApply: false
 ---
 description: "Codacy integration for automated quality and security analysis. Applies to all source code files."
 globs: "src/**/*.ts,src/**/*.tsx,src/**/*.js,src/**/*.jsx,api/**/*.ts"
-AlwaysApply: false
 ---
 # 🔒 Codacy Quality & Security Gates
 

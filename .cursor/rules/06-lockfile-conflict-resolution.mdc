@@ -1,6 +1,11 @@
 ---
-description: 
-globs: 
+description: "Lockfile conflict resolution standards for package managers. Applies to lockfile and package manager operations."
+globs: package-lock.json,pnpm-lock.yaml,yarn.lock
+alwaysApply: false
+---
+---
+description: "Lockfile conflict resolution standards for package managers. Applies to lockfile and package manager operations."
+globs: "pnpm-lock.yaml,package-lock.json,yarn.lock"
 alwaysApply: false
 ---
 # 🔒 Lockfile Conflict Resolution Standards

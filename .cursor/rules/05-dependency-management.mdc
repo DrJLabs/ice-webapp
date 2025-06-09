@@ -1,13 +1,9 @@
 ---
-description: 
-globs: 
-alwaysApply: true
+description: "Dependency management workflow, including security scans with Trivy. Applies only to package.json modifications."
+globs: package.json
+alwaysApply: false
 ---
----
-description: "Dependency management workflow, including security scans with Trivy. Applies only to package.json."
-globs: "package.json"
-AlwaysApply: false
----
+# 📦 Dependency Management & Security
 # 📦 Dependency Management & Security
 
 This rule applies **ONLY** when you are modifying the `package.json` file.

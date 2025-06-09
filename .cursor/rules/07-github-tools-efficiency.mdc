@@ -1,7 +1,12 @@
 ---
+description: "GitHub tools efficiency guidelines and MCP GitHub tools usage. Always applied for optimal GitHub interactions."
+globs: "**/*"
+alwaysApply: false
+---
+---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # 🔧 GitHub Tools Efficiency Guidelines
 
