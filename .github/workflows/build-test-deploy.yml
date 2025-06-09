@@ -16,7 +16,7 @@ jobs:
   # Quality checks with optimized tmpfs
   quality-checks:
     name: Code Quality & Linting
-    runs-on: [self-hosted, linux, quality, lint]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     steps:
       - name: Setup tmpfs for quality checks
@@ -50,7 +50,7 @@ jobs:
   # Build with performance optimizations
   build:
     name: Build Application
-    runs-on: [self-hosted, linux, build, fast-setup]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     needs: [quality-checks]
     steps:
@@ -81,7 +81,7 @@ jobs:
         run: |
           pnpm config set store-dir /tmp/build-app/.pnpm-store
           pnpm config set cache-dir /tmp/build-app/.pnpm-cache
-          pnpm config set network-timeout 300000
+          pnpm config set timeout 300000
           pnpm config set fetch-retries 5
 
       - name: Install dependencies
@@ -103,7 +103,7 @@ jobs:
   # Parallel testing
   test-unit:
     name: Unit Tests
-    runs-on: [self-hosted, linux, test, parallel, fast]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 12
     needs: [quality-checks]
     steps:
@@ -143,7 +143,7 @@ jobs:
   # Security scanning with vulnerability fixes
   security:
     name: Security Scan
-    runs-on: [self-hosted, linux, security, scan]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -176,7 +176,7 @@ jobs:
   # Integration tests - only run after build completes
   test-integration:
     name: Integration Tests
-    runs-on: [self-hosted, linux, integration, api, backend]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     needs: [build, test-unit]
     steps:
@@ -220,7 +220,7 @@ jobs:
   # E2E tests with Playwright - depends on build
   test-e2e:
     name: E2E Tests
-    runs-on: [self-hosted, linux, test]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 25
     needs: [build]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
@@ -271,7 +271,7 @@ jobs:
   # Deploy to staging (develop branch) or production (main branch)
   deploy:
     name: Deploy Application
-    runs-on: [self-hosted, linux, deploy, docker, production]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     needs: [build, test-unit, security, test-integration]
     if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.ref == 'refs/heads/develop' && github.event_name == 'push')
@@ -311,7 +311,7 @@ jobs:
         run: |
           echo "📊 Workflow Completed with Optimizations"
           echo "✅ tmpfs optimization enabled"
-          echo "✅ Specialized runners utilized"
+          echo "✅ Simplified runner labels for reliability"
           echo "✅ Parallel job execution"
           echo "✅ Optimized dependency caching"
           echo "✅ Performance tuning active" 
