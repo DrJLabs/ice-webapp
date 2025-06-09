@@ -14,7 +14,7 @@ env:
 jobs:
   codacy-analysis:
     name: Codacy Analysis
-    runs-on: [self-hosted, linux, quality, analysis]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     env:
       CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
@@ -81,7 +81,7 @@ jobs:
 
   security:
     name: Security Scan
-    runs-on: [self-hosted, linux, security, scan]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
       - name: Checkout code

@@ -14,7 +14,7 @@ env:
 jobs:
   unit-tests:
     name: Unit Tests
-    runs-on: [self-hosted, linux, test, unit]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     env:
       CODACY_ACCOUNT_TOKEN: ${{ secrets.CODACY_ACCOUNT_TOKEN }}
@@ -79,7 +79,7 @@ jobs:
 
   type-check:
     name: TypeScript Type Check
-    runs-on: [self-hosted, linux, nodejs, typescript, frontend]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 5
     steps:
       - name: Checkout code
@@ -120,7 +120,7 @@ jobs:
 
   lint:
     name: ESLint Check
-    runs-on: [self-hosted, linux, quality, analysis]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 5
     steps:
       - name: Checkout code
@@ -161,7 +161,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: [self-hosted, linux, integration, api, backend]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -218,7 +218,7 @@ jobs:
 
   parallel-tests:
     name: Parallel Test Matrix
-    runs-on: [self-hosted, linux, test, parallel, fast]
+    runs-on: [self-hosted, linux]
     timeout-minutes: 8
     strategy:
       matrix:

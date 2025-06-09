@@ -1,0 +1,68 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 🔒 Lockfile Conflict Resolution Standards
+
+## 🎯 Core Principles
+
+When encountering lockfile conflicts during merge/rebase operations, **NEVER** manually edit lockfile contents. Always use package manager built-in conflict resolution mechanisms.
+
+## 📋 Resolution Strategy by Package Manager
+
+### PNPM (Recommended)
+1. **Use merge strategy**: `git merge -X ours` or `git merge -X theirs`
+2. **Regenerate lockfile**: `rm pnpm-lock.yaml && pnpm install`
+3. **Leverage auto-resolution**: Run `pnpm install` on conflicted lockfile (pnpm has built-in merge capabilities)
+
+Reference: [pnpm Git documentation](https://pnpm.io/git#merge-conflicts)
+
+### NPM
+1. **Delete and regenerate**: `rm package-lock.json && npm install`
+2. **Use npm ci**: For clean install from package.json
+
+### Yarn
+1. **Delete and regenerate**: `rm yarn.lock && yarn install`
+2. **Use yarn install**: Yarn has some built-in conflict resolution
+
+## ⚠️ Critical Requirements
+
+### Before Resolution
+- **Stash unstaged changes**: `git stash push -m "Pre-conflict resolution stash"`
+- **Backup original lockfile**: `cp pnpm-lock.yaml pnpm-lock.yaml.backup`
+- **Verify package.json integrity**: Ensure package.json is not corrupted
+
+### During Resolution
+- **Use package manager tools**: Never manually edit lockfile conflict markers
+- **Preserve exact versions**: If using exact version pinning, ensure regeneration respects this
+- **Test immediately**: Run `npm test` or equivalent after regeneration
+
+### After Resolution
+- **Run quality gates**: All linting, testing, and security scans must pass
+- **Verify dependencies**: Ensure all required packages are still properly installed
+- **Check for breaking changes**: Review any version updates that occurred during resolution
+
+## 🔄 ICE-WEBAPP Specific Workflow
+
+1. **Conflict Detection**: When git reports lockfile conflicts
+2. **Apply Strategy**: Use `-X ours` merge + regeneration for dependency updates
+3. **Quality Gates**: Run all ICE-WEBAPP quality gates immediately
+4. **Security Scan**: Use Codacy CLI with Trivy for security validation
+5. **Coverage Verification**: Ensure test coverage thresholds are maintained
+
+## 🚨 Red Flags - Never Do This
+
+- ❌ Manually editing `<<<<<<< HEAD` conflict markers in lockfiles
+- ❌ Accepting "both" changes in lockfile conflicts
+- ❌ Committing without regenerating the lockfile
+- ❌ Skipping post-resolution testing
+- ❌ Ignoring security scans after dependency changes
+
+## 📊 Success Metrics
+
+- ✅ Lockfile is syntactically valid
+- ✅ All dependencies resolve correctly
+- ✅ No security vulnerabilities introduced
+- ✅ Test suite passes with maintained coverage
+- ✅ Build artifacts generate successfully
