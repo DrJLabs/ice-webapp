@@ -1,11 +1,25 @@
 # .github/workflows/codacy.yml
-name: Codacy Security and Quality Analysis
+name: Codacy Security and Quality Analysis (Focused)
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      analysis_type:
+        description: 'Type of Codacy analysis to run'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - 'full'
+          - 'security-only'
+          - 'coverage-only'
+  schedule:
+    # Run weekly security analysis on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+# NOTE: This workflow provides focused Codacy analysis
+# Daily CI security is handled by build-test-deploy.yml
+# This is for comprehensive weekly analysis and manual deep-dive reviews
 
 env:
   NODE_VERSION: '20.19.1'

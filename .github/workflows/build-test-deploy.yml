@@ -110,7 +110,7 @@ jobs:
         run: |
           pnpm config set store-dir $RUNNER_TEMP/build-app/.pnpm-store
           pnpm config set cache-dir $RUNNER_TEMP/build-app/.pnpm-cache
-          pnpm config set network-timeout 300000
+          pnpm config set timeout 300000
           pnpm config set fetch-retries 5
 
       - name: Install dependencies

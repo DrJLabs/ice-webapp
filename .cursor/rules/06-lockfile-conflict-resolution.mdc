@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
 # 🔒 Lockfile Conflict Resolution Standards
@@ -16,7 +16,7 @@ When encountering lockfile conflicts during merge/rebase operations, **NEVER** m
 2. **Regenerate lockfile**: `rm pnpm-lock.yaml && pnpm install`
 3. **Leverage auto-resolution**: Run `pnpm install` on conflicted lockfile (pnpm has built-in merge capabilities)
 
-Reference: [pnpm Git documentation](https://pnpm.io/git#merge-conflicts)
+Reference: [pnpm Git documentation](mdc:https:/pnpm.io/git#merge-conflicts)
 
 ### NPM
 1. **Delete and regenerate**: `rm package-lock.json && npm install`

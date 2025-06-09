@@ -2,12 +2,23 @@ name: Runner Priority and Fallback Test
 
 on:
   workflow_dispatch:
-  push:
-    branches: [cursor/chore/update-dependencies]
+    inputs:
+      test_type:
+        description: 'Type of runner test to perform'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'repository'
+          - 'organization'
+          - 'specialized'
+          - 'diagnosis'
 
 # Based on GitHub Documentation June 2025:
 # Runner precedence: repository → organization → enterprise
 # https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
+# NOTE: This is a diagnostic workflow - run manually only
 
 jobs:
   test-repository-runners:
