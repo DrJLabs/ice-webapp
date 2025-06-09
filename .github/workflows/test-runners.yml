@@ -1,0 +1,41 @@
+name: Test Runner Availability
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [cursor/chore/update-dependencies]
+
+jobs:
+  test-basic-runner:
+    name: Test Basic Self-Hosted Runner
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Check runner environment
+        run: |
+          echo "Runner OS: $RUNNER_OS"
+          echo "Runner Name: $RUNNER_NAME"
+          echo "Available runners:"
+          echo "Labels: ${{ toJson(runner.labels) }}"
+          echo "Working directory: $(pwd)"
+          echo "User: $(whoami)"
+          
+  test-linux-runner:
+    name: Test Linux Self-Hosted Runner
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 5
+    steps:
+      - name: Check linux runner
+        run: |
+          echo "Linux runner working"
+          echo "Distro: $(cat /etc/os-release | grep PRETTY_NAME)"
+          
+  test-specific-labels:
+    name: Test Specific Label Runner
+    runs-on: [self-hosted, linux, quality]
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - name: Check specific label runner
+        run: |
+          echo "Specific label runner working" 
