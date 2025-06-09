@@ -404,6 +404,11 @@ jobs:
           # Aggressive pnpm cleanup
           sudo rm -rf ~/setup-pnpm || true
           sudo pkill -f pnpm || true
+          # Clean Playwright cache and installations
+          sudo rm -rf ~/.cache/ms-playwright* || true
+          sudo rm -rf ~/.cache/playwright* || true
+          # Clean any global npm/node modules that might conflict
+          sudo rm -rf ~/.npm/_npx || true
 
       - name: Setup ephemeral tmpfs for E2E tests
         run: |
@@ -416,11 +421,22 @@ jobs:
         with:
           clean: true
 
-      - name: Download build artifacts (if available)
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
+          path: ./
         continue-on-error: true
+
+      - name: Verify build artifacts or build fresh
+        run: |
+          if [ ! -d ".next" ]; then
+            echo "Build artifacts not found, building fresh..."
+            export PATH=$(npm config get prefix)/bin:$PATH
+            pnpm build
+          else
+            echo "Build artifacts found, using existing build"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -449,7 +465,11 @@ jobs:
       - name: Install dependencies
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
+          # Ensure clean installation
+          rm -rf node_modules/.cache || true
           pnpm install --frozen-lockfile
+          # Verify Playwright installation
+          ls -la node_modules/@playwright/test/ || echo "Playwright not found in node_modules"
 
       - name: Install system dependencies for Playwright
         run: |
@@ -490,19 +510,30 @@ jobs:
       - name: Install Playwright browsers
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
+          # Force clean any conflicting Playwright installations
+          rm -rf ~/.cache/ms-playwright* || true
           # Install Playwright browsers without system deps (already installed above)
           npx playwright install chromium
           # Verify browser installation
           npx playwright --version
           echo "✅ Playwright browsers installed successfully"
+          # Verify we have only one version
+          find node_modules -name "playwright" -type d || true
 
       - name: Run E2E tests with Playwright
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
           export TMPDIR=$RUNNER_TEMP/e2e-tests/.playwright-tmp
           mkdir -p $TMPDIR
+          # Debug package versions
+          echo "=== Playwright Environment Debug ==="
+          npx playwright --version
+          npm list @playwright/test 2>/dev/null || echo "No @playwright/test found"
+          npm list playwright 2>/dev/null || echo "No playwright found"
+          echo "Node.js: $(node --version)"
+          echo "=== End Debug ==="
           # Run E2E tests directly with Playwright
-          npx playwright test
+          npx playwright test --reporter=list
         env:
           NODE_OPTIONS: --max-old-space-size=4096
           PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
