@@ -28,7 +28,7 @@ importers:
         specifier: ^4.10.2
         version: 4.10.2(playwright-core@1.52.0)
       '@playwright/test':
-        specifier: ^1.37.0
+        specifier: ^1.52.0
         version: 1.52.0
       '@testing-library/jest-dom':
         specifier: ^6.1.2
@@ -87,9 +87,6 @@ importers:
       jsdom:
         specifier: ^22.1.0
         version: 22.1.0
-      playwright:
-        specifier: ^1.37.0
-        version: 1.52.0
       postcss:
         specifier: ^8.4.28
         version: 8.5.4
