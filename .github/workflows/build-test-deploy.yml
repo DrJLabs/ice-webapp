@@ -451,17 +451,13 @@ jobs:
           export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: |
-          export PATH=$(npm config get prefix)/bin:$PATH
-          pnpm playwright install --with-deps
-
-      - name: Run E2E tests
+      - name: Run E2E tests with Docker
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
           export TMPDIR=$RUNNER_TEMP/e2e-tests/.playwright-tmp
           mkdir -p $TMPDIR
-          pnpm test:e2e
+          # Use Docker-based E2E testing to avoid system dependency issues
+          ./scripts/e2e-docker.sh --run-tests
         env:
           NODE_OPTIONS: --max-old-space-size=4096
 

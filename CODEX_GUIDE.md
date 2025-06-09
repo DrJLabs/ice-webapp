@@ -76,7 +76,7 @@ Your Codex environment will automatically configure:
 
 ### Core Agent Rules
 
-Based on OpenAI Model Specification and victorb's AGENTS.md best practices:
+Based on current best practices for AI-assisted development:
 
 ```markdown
 ## Development Guidelines for this Task

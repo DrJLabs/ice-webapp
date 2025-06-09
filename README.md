@@ -230,9 +230,12 @@ pnpm run test:coverage # Coverage report
 
 ### E2E Testing
 ```bash
-pnpm run test:e2e      # Run Playwright tests
-pnpm run test:e2e:ui   # Visual E2E runner
+pnpm run test:e2e        # Run Playwright tests
+pnpm run test:e2e:ui     # Visual E2E runner
+pnpm run test:e2e:docker # Run E2E tests in Docker container
 ```
+
+See [E2E Testing Setup Guide](E2E_SETUP_GUIDE.md) for detailed configuration and Docker-based testing.
 
 ### Accessibility Testing
 ```bash
@@ -273,12 +276,15 @@ pnpm run test:a11y     # Accessibility tests
 ## 📚 Documentation
 
 ### Available Guides
+- [Development Guide](DEVELOPMENT_GUIDE.md) - Comprehensive development standards
 - [AI Prompts Collection](ai/prompts/development-prompts.md)
 - [Codex Integration Guide](CODEX_GUIDE.md)
-- [Codacy & Cursor Integration](docs/CODACY_CURSOR_INTEGRATION.md)
-- [Codacy Quality Gates](docs/CODACY_QUALITY_GATES.md)
-- [Codacy Fix Summary](docs/CODACY_FIX_SUMMARY.md)
+- [Codacy Integration](docs/CODACY_INTEGRATION.md)
+- [E2E Testing Setup](E2E_SETUP_GUIDE.md)
 - [Deployment Guide](DEPLOYMENT.md)
+- [Quick Start Guide](QUICK_START.md)
+- [Testing Guide](CODEX_TESTING.md)
+- [Troubleshooting](CODEX_TROUBLESHOOTING.md)
 
 ## 🤝 Contributing
 
