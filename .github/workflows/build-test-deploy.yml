@@ -451,15 +451,50 @@ jobs:
           export PATH=$(npm config get prefix)/bin:$PATH
           pnpm install --frozen-lockfile
 
+      - name: Start Next.js application for E2E tests
+        run: |
+          export PATH=$(npm config get prefix)/bin:$PATH
+          # Start Next.js in background with proper hostname binding for Docker
+          pnpm dev --hostname 0.0.0.0 --port 3000 &
+          echo $! > /tmp/nextjs.pid
+          
+          # Wait for app to be ready
+          timeout=60
+          counter=0
+          while [ $counter -lt $timeout ]; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "Next.js app is ready on port 3000"
+              break
+            fi
+            echo "Waiting for Next.js app to start... ($counter/$timeout)"
+            sleep 2
+            counter=$((counter + 2))
+          done
+          
+          if [ $counter -ge $timeout ]; then
+            echo "Failed to start Next.js app within $timeout seconds"
+            exit 1
+          fi
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
       - name: Run E2E tests with Docker
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
           export TMPDIR=$RUNNER_TEMP/e2e-tests/.playwright-tmp
           mkdir -p $TMPDIR
           # Use Docker-based E2E testing to avoid system dependency issues
-          ./scripts/e2e-docker.sh --run-tests
+          ./scripts/e2e-docker.sh
         env:
           NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Stop Next.js application
+        if: always()
+        run: |
+          if [ -f /tmp/nextjs.pid ]; then
+            kill $(cat /tmp/nextjs.pid) || true
+            rm -f /tmp/nextjs.pid
+          fi
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

@@ -88,9 +88,6 @@ run_e2e_tests() {
     log "Starting E2E tests in Docker container..."
     log "Test arguments: ${test_args:-"(default)"}"
     
-    # Ensure network connectivity
-    docker network create host 2>/dev/null || true
-    
     # Run the E2E tests
     docker-compose -f "$COMPOSE_FILE" run --rm \
         -e TMPDIR=/tmp/playwright-tmp \
@@ -182,7 +179,6 @@ main() {
     
     # Pre-flight checks
     check_docker
-    check_app_running
     
     # Setup container if needed
     setup_container
