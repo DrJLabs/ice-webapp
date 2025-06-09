@@ -1,0 +1,69 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 🔧 GitHub Tools Efficiency Guidelines
+
+## 🎯 Tool Selection Strategy
+
+### GitHub CLI (`gh`) Command Issues
+- **AVOID**: `gh` commands suffer from automatic `| cat` appending that breaks pagination and output
+- **KNOWN FAILURES**: 
+  - `gh workflow list` - fails with head: cannot open '|' error
+  - `gh run list` - same pagination issues
+  - Any command expecting interactive output
+
+### MCP GitHub Tools (Preferred)
+**ALWAYS USE** for workflow monitoring and repository management:
+- `mcp_github_get_pull_request_status` instead of `gh pr status`
+- `mcp_github_get_pull_request` instead of `gh pr view`
+- `mcp_github_list_pull_requests` instead of `gh pr list`
+- `mcp_github_get_commit` instead of `gh commit view`
+- All other MCP GitHub tools for reliability
+
+## 🚀 Org-Level Runner Configuration
+
+### ✅ Verified Best Practices
+1. **Simple Labels**: Use `[self-hosted, linux]` instead of complex labels
+2. **Avoid Specialized Labels**: `quality`, `analysis`, `security`, `scan`, `build` cause runner pickup failures
+3. **TmpFS Optimization**: All org runners typically have tmpfs available
+
+### 🔧 TmpFS Implementation Strategy
+```yaml
+- name: Setup tmpfs for faster builds
+  run: |
+    sudo mkdir -p /tmp/fast-build
+    sudo mount -t tmpfs -o size=4G tmpfs /tmp/fast-build || echo "tmpfs already mounted"
+    mkdir -p /tmp/fast-build/{.next,node_modules}
+  continue-on-error: true
+```
+
+## 📊 Workflow Monitoring Protocol
+
+### ✅ Required Checks
+1. **After push**: Wait 30-60 seconds for workflow pickup
+2. **Use MCP tools**: `mcp_github_get_pull_request_status` for accurate status
+3. **Monitor progress**: Check every 2-3 minutes until completion
+4. **Debug failures**: Use `mcp_github_get_pull_request_reviews` for CI results
+
+### ❌ Avoid These Patterns
+- Using `gh` commands for status checks
+- Complex runner label requirements
+- Manual workflow triggering without status monitoring
+- Skipping tmpfs optimization on self-hosted runners
+
+## 🔄 Continuous Improvement
+- Always verify runner pickup within 2 minutes
+- Add tmpfs optimization to ALL self-hosted jobs
+- Use MCP tools for all GitHub API interactions
+- Monitor and document any new failure patterns
+
+## ⚡ Command Replacement Map
+
+| Avoid (gh CLI) | Use Instead (MCP) |
+|---|---|
+| `gh workflow list` | `mcp_github_list_pull_requests` + workflow files |
+| `gh run list` | `mcp_github_get_pull_request_status` |
+| `gh pr status` | `mcp_github_get_pull_request_status` |
+| `gh repo list` | `mcp_github_search_repositories` |
