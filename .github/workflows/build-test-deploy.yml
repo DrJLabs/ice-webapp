@@ -466,13 +466,27 @@ jobs:
             libxrandr2 \
             libgbm1 \
             libxss1 \
-            libasound2-dev || true
+            libasound2-dev \
+            libatspi2.0-0 \
+            libgtk-3-0 \
+            libgdk-pixbuf2.0-0 \
+            libcairo-gobject2 \
+            libpango-1.0-0 \
+            libharfbuzz0b \
+            libgdk-pixbuf2.0-0 \
+            libgtk-3-0 \
+            libgssapi-krb5-2 \
+            libgtk-4-1 || true
+          echo "✅ System dependencies installed"
           
       - name: Install Playwright browsers
         run: |
           export PATH=$(npm config get prefix)/bin:$PATH
           # Install Playwright browsers without system deps (already installed above)
-          npx playwright install chromium
+          # Use --force-install to ensure fresh browser installation
+          npx playwright install --force-install chromium
+          # Verify browser installation
+          npx playwright --version
           echo "✅ Playwright browsers installed successfully"
 
       - name: Run E2E tests with Playwright
