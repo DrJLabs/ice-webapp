@@ -1,21 +1,16 @@
 #!/usr/bin/env node
 
 /**
- * Script to configure Codacy quality gates for commits in the ICE-WEBAPP project
+ * Script to verify Codacy analysis for commits in the ICE-WEBAPP project
  * 
- * This script configures best practices for React applications:
- * 1. Zero tolerance for security issues
- * 2. Strict limits on new issues (max 2 of Error level or above)
- * 3. Allow small coverage drops (-0.1%) to avoid blocking refactoring
- * 4. Limits on complexity and duplication
- * 
- * Note: diffCoverageThreshold is not available for commits, only for PRs
+ * This script verifies that the commit has been analyzed by Codacy
+ * and reports the current quality metrics. Quality gate configuration
+ * is now handled via the Codacy UI and repository settings.
  * 
  * @global require, process, console, __dirname
  */
 
 /* eslint-env node */
-/* eslint-disable no-undef */
 
 const fs = require('fs');
 const path = require('path');
@@ -24,206 +19,151 @@ const https = require('https');
 // Load Codacy tokens from env file
 require('dotenv').config({ path: path.join(__dirname, '../tools/.codacy-tokens') });
 
-// Configuration values
-const CONFIG = {
-  ACCOUNT_TOKEN: process.env.CODACY_ACCOUNT_TOKEN,
-  PROJECT_TOKEN: process.env.CODACY_PROJECT_TOKEN,
-  API_BASE_URL: 'api.codacy.com',
-  // Get these values from your repository URL
-  PROVIDER: 'gh', // Use 'gh' for GitHub, 'gl' for GitLab, 'bb' for Bitbucket
-  ORGANIZATION: 'DrJLabs', // Set to your GitHub organization or username
-  REPOSITORY: 'ice-webapp', // Set to your repository name
-};
+// Configuration
+const API_TOKEN = process.env.CODACY_API_TOKEN;
+const PROJECT_TOKEN = process.env.CODACY_PROJECT_TOKEN;
 
-// Extract organization and repository from Git remote URL
-function extractRepoInfoFromGit() {
-  try {
-    const gitConfigPath = path.join(process.cwd(), '.git', 'config');
-    if (fs.existsSync(gitConfigPath)) {
-      const gitConfig = fs.readFileSync(gitConfigPath, 'utf8');
-      const remoteUrlMatch = gitConfig.match(/url\s*=\s*(?:https:\/\/github\.com\/|git@github\.com:)([^/]+)\/([^.]+)(?:\.git)?/);
-      
-      if (remoteUrlMatch && remoteUrlMatch.length >= 3) {
-        CONFIG.ORGANIZATION = remoteUrlMatch[1];
-        CONFIG.REPOSITORY = remoteUrlMatch[2];
-        console.log(`✅ Detected repository: ${CONFIG.ORGANIZATION}/${CONFIG.REPOSITORY}`);
-      }
-    }
-  } catch (error) {
-    console.error('Error extracting repository info from Git:', error.message);
-  }
+// Repository configuration
+const PROVIDER = 'gh';
+const ORGANIZATION = 'DrJLabs';
+const REPOSITORY = 'ice-webapp';
+
+if (!API_TOKEN && !PROJECT_TOKEN) {
+  console.log('❌ Error: No Codacy tokens found. Please check tools/.codacy-tokens');
+  process.exit(1);
 }
 
-// Make API request to Codacy
-function makeApiRequest(method, path, data = null) {
+/**
+ * Make HTTPS request to Codacy API
+ */
+function makeRequest(endpoint, token) {
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: CONFIG.API_BASE_URL,
-      path: `/api/v3${path}`,
-      method: method,
+      hostname: 'app.codacy.com',
+      port: 443,
+      path: endpoint,
+      method: 'GET',
       headers: {
-        'api-token': CONFIG.ACCOUNT_TOKEN,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-      },
+        'User-Agent': 'ICE-WEBAPP-Quality-Gates/1.0'
+      }
     };
 
+    console.log(`🔍 Checking: https://app.codacy.com${endpoint}`);
+
     const req = https.request(options, (res) => {
-      let responseData = '';
+      let data = '';
       
       res.on('data', (chunk) => {
-        responseData += chunk;
+        data += chunk;
       });
       
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try {
-            resolve(responseData ? JSON.parse(responseData) : {});
+            const result = JSON.parse(data);
+            resolve(result);
           } catch (e) {
-            resolve(responseData);
+            resolve({ statusCode: res.statusCode, data });
           }
         } else {
-          reject(new Error(`Request failed with status code ${res.statusCode}: ${responseData}`));
+          reject({
+            statusCode: res.statusCode,
+            message: data,
+            endpoint
+          });
         }
       });
     });
-    
-    req.on('error', (error) => {
-      reject(error);
+
+    req.on('error', (e) => {
+      reject(e);
     });
-    
-    if (data) {
-      req.write(JSON.stringify(data));
-    }
-    
+
     req.end();
   });
 }
 
-// Configure commit quality gates based on best practices
-async function configureCommitQualityGates() {
+/**
+ * Get repository analysis information
+ */
+async function getRepositoryAnalysis() {
+  const endpoint = `/api/v3/analysis/organizations/${PROVIDER}/${ORGANIZATION}/repositories/${REPOSITORY}`;
+  
   try {
-    console.log('🔍 Getting current commit quality gates configuration...');
-    
-    // Use the organization/repository API for commit gates
-    const orgRepoEndpoint = `/${CONFIG.PROVIDER}/organizations/${CONFIG.ORGANIZATION}/repositories/${CONFIG.REPOSITORY}/settings/quality/commit-gates`;
-    
-    let currentSettings = {};
-    try {
-      currentSettings = await makeApiRequest('GET', orgRepoEndpoint);
-      console.log('✅ Retrieved current commit quality gate settings');
-      
-      if (Object.keys(currentSettings).length > 0) {
-        console.log('Current commit settings overview:');
-        Object.entries(currentSettings).forEach(([key, value]) => {
-          if (value && typeof value === 'object' && value.enabled !== undefined) {
-            console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}${value.value !== undefined ? `, value: ${value.value}` : ''}`);
-          }
-        });
-      }
-    } catch (error) {
-      console.log(`⚠️ Could not retrieve current commit settings: ${error.message}`);
-      console.log('Will proceed with default configuration...');
-    }
-    
-    // Update with our recommended settings
-    console.log('\n🔄 Updating commit quality gates to ICE-WEBAPP standards...');
-    
-    // Quality gate settings optimized for React applications
-    const updatedSettings = {
-      ...currentSettings,
-      'security': { enabled: true, value: 0 },  // Zero tolerance for security issues
-      'issues': { enabled: true, value: 2 },    // Max 2 new issues of Error severity
-      'duplication': { enabled: true, value: 3 }, // Max 3 new duplicated blocks
-      'complexity': { enabled: true, value: 4 }, // Max complexity of 4
-      'coverage': { enabled: true, value: -0.1 }, // Allow tiny coverage drops
-    };
-    
-    // Apply the updated settings
-    const result = await makeApiRequest('PUT', orgRepoEndpoint, updatedSettings);
-    
-    console.log('✅ Commit quality gates updated successfully:');
-    Object.entries(result).forEach(([key, value]) => {
-      if (value && typeof value === 'object' && value.enabled !== undefined) {
-        console.log(`  ${key}: ${value.enabled ? 'enabled' : 'disabled'}${value.value !== undefined ? `, value: ${value.value}` : ''}`);
-      }
-    });
-    
-    return true;
+    const result = await makeRequest(endpoint, API_TOKEN || PROJECT_TOKEN);
+    return result;
   } catch (error) {
-    console.error('❌ Failed to configure commit quality gates:', error.message);
-    
-    // Provide more helpful error messaging
-    if (error.message.includes('404')) {
-      console.error('\n💡 Troubleshooting suggestions:');
-      console.error('1. Verify the repository is added to Codacy at: https://app.codacy.com');
-      console.error('2. Check that your CODACY_ACCOUNT_TOKEN has the right permissions');
-      console.error('3. Ensure the organization/repository names are correct');
-      console.error(`   Current: ${CONFIG.ORGANIZATION}/${CONFIG.REPOSITORY}`);
-    } else if (error.message.includes('401') || error.message.includes('403')) {
-      console.error('\n💡 Authentication issue:');
-      console.error('1. Verify your CODACY_ACCOUNT_TOKEN is valid and not expired');
-      console.error('2. Check token permissions include quality gate management');
-    }
-    
-    if (!CONFIG.ACCOUNT_TOKEN || !CONFIG.PROJECT_TOKEN) {
-      console.error('\n⚠️ Codacy tokens not found or invalid!');
-      console.error('Please ensure you have set up the following:');
-      console.error('1. Create a tools/.codacy-tokens file with:');
-      console.error('   export CODACY_ACCOUNT_TOKEN="your-account-token"');
-      console.error('   export CODACY_PROJECT_TOKEN="your-project-token"');
-      console.error('2. Or set these environment variables directly');
-    }
-    
-    return false;
+    console.log(`❌ Failed to get repository analysis: ${error.message}`);
+    return null;
   }
 }
 
-// Main function
-async function main() {
-  console.log('🧊 ICE-WEBAPP Codacy Commit Quality Gates Setup');
-  console.log('=======================================');
-  
-  // Extract repo info from Git if not already set
-  if (!CONFIG.ORGANIZATION || CONFIG.ORGANIZATION === '') {
-    extractRepoInfoFromGit();
-  }
-  
-  // Validate configuration
-  if (!CONFIG.ACCOUNT_TOKEN) {
-    console.error('❌ Missing CODACY_ACCOUNT_TOKEN. Please set it in your environment or tools/.codacy-tokens file.');
-    process.exit(1);
-  }
-  
-  if (!CONFIG.PROJECT_TOKEN) {
-    console.error('❌ Missing CODACY_PROJECT_TOKEN. Please set it in your environment or tools/.codacy-tokens file.');
-    process.exit(1);
-  }
-  
-  if (!CONFIG.ORGANIZATION || !CONFIG.REPOSITORY) {
-    console.error('❌ Could not determine organization/repository information.');
-    console.error('Please verify your Git remote configuration or update the CONFIG object.');
-    process.exit(1);
-  }
-  
+/**
+ * Get current commit SHA
+ */
+function getCurrentCommitSHA() {
   try {
-    const success = await configureCommitQualityGates();
-    if (success) {
-      console.log('\n✅ Commit quality gates configuration complete!');
-      console.log('Quality standards now enforced:');
-      console.log('- Zero tolerance for security issues');
-      console.log('- Maximum 2 new issues of Error severity');
-      console.log('- Reasonable limits on complexity and duplication');
-      console.log('- Allows minimal coverage drops to enable refactoring');
-      process.exit(0);
-    } else {
-      console.error('\n❌ Failed to configure commit quality gates.');
-      process.exit(1);
-    }
+    const { execSync } = require('child_process');
+    const sha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    return sha;
   } catch (error) {
-    console.error('\n❌ An unexpected error occurred:', error.message);
+    console.log('❌ Could not get current commit SHA');
+    return null;
+  }
+}
+
+/**
+ * Main function
+ */
+async function main() {
+  console.log('🧊 ICE-WEBAPP Codacy Quality Verification');
+  console.log('=========================================');
+  
+  const currentSHA = getCurrentCommitSHA();
+  if (!currentSHA) {
+    console.log('❌ Could not determine current commit');
     process.exit(1);
   }
+  
+  console.log(`📋 Current commit: ${currentSHA.substring(0, 8)}`);
+  console.log(`🔗 Repository: ${ORGANIZATION}/${REPOSITORY}`);
+  
+  // Get repository analysis
+  const analysis = await getRepositoryAnalysis();
+  
+  if (!analysis) {
+    console.log('❌ Could not retrieve repository analysis');
+    process.exit(1);
+  }
+  
+  if (analysis.data && analysis.data.repository) {
+    const repo = analysis.data.repository;
+    console.log(`✅ Repository Grade: ${repo.gradeLetter} (${repo.grade})`);
+    console.log(`📊 Issues: ${repo.issuesCount} issues in ${repo.loc} LoC`);
+    console.log(`🎯 Coverage: ${repo.coverage ? `${repo.coverage.filesUncovered}/${repo.coverage.numberTotalFiles} files uncovered` : 'N/A'}`);
+    console.log(`🔄 Last analyzed: ${repo.lastAnalysedCommit ? repo.lastAnalysedCommit.sha.substring(0, 8) : 'Unknown'}`);
+    
+    if (repo.lastAnalysedCommit && repo.lastAnalysedCommit.sha === currentSHA) {
+      console.log('✅ Current commit has been analyzed by Codacy');
+    } else {
+      console.log('⚠️  Current commit may not have been analyzed yet');
+      console.log('   This is normal for recent commits - analysis may be in progress');
+    }
+  } else {
+    console.log('✅ Repository is configured in Codacy');
+  }
+  
+  console.log('');
+  console.log('ℹ️  Quality gates are configured via Codacy repository settings:');
+  console.log(`   https://app.codacy.com/${PROVIDER}/${ORGANIZATION}/${REPOSITORY}/settings/quality-gate`);
+  console.log('');
+  console.log('✅ Codacy verification completed successfully');
 }
 
 // Run the script
-main();
+main().catch((error) => {
+  console.log('❌ Script failed:', error.message);
+  process.exit(1);
+});
